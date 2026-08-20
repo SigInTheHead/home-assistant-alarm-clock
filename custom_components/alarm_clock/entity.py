@@ -4,7 +4,7 @@ from __future__ import annotations
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity import Entity
 
-from .const import CONF_NAME, DOMAIN
+from .const import CONF_MINUTE_GRANULARITY, CONF_NAME, DOMAIN
 
 class MorningAlarmEntity(Entity):
     """Entity attached to exactly one alarm device."""
@@ -24,7 +24,11 @@ class MorningAlarmEntity(Entity):
     @property
     def extra_state_attributes(self):
         """Allow optional cards to discover sibling entities without hard-coded IDs."""
-        return {"alarm_clock_entry_id": self.coordinator.entry.entry_id, "alarm_clock_key": self.key}
+        return {
+            "alarm_clock_entry_id": self.coordinator.entry.entry_id,
+            "alarm_clock_key": self.key,
+            "minute_granularity": self.coordinator.options[CONF_MINUTE_GRANULARITY],
+        }
 
     async def async_added_to_hass(self) -> None:
         self._unsub = self.coordinator.add_listener(self.async_write_ha_state)

@@ -21,7 +21,7 @@ from homeassistant.helpers.selector import (
 
 from .const import (
     CONF_DAY_ENABLED, CONF_DAY_TIMES, CONF_FOLLOWUP_MAIN_MEDIA, CONF_FOLLOWUP_PRE_MEDIA,
-    CONF_MEDIA_PLAYER, CONF_NAME as ALARM_NAME, CONF_PRIMARY_MAIN_MEDIA, CONF_PRIMARY_PRE_MEDIA,
+    CONF_MEDIA_PLAYER, CONF_MINUTE_GRANULARITY, CONF_NAME as ALARM_NAME, CONF_PRIMARY_MAIN_MEDIA, CONF_PRIMARY_PRE_MEDIA,
     CONF_SCHEDULE_MODE, DEFAULT_OPTIONS, DOMAIN, SCHEDULE_COMPACT,
     SCHEDULE_PER_DAY, WEEKDAY_DAYS,
 )
@@ -120,7 +120,11 @@ class MorningAlarmOptionsFlow(config_entries.OptionsFlow):
                 if isinstance(media := user_input.get(key), Mapping)
                 and media.get("media_content_id")
             }
-            new_options = {**options, **updated_media}
+            new_options = {
+                **options,
+                **updated_media,
+                CONF_MINUTE_GRANULARITY: user_input[CONF_MINUTE_GRANULARITY],
+            }
             new_options = _with_schedule_mode(
                 new_options, user_input[CONF_SCHEDULE_MODE]
             )
@@ -141,6 +145,12 @@ class MorningAlarmOptionsFlow(config_entries.OptionsFlow):
                 SelectSelectorConfig(options=[
                     {"value": SCHEDULE_COMPACT, "label": "Weekday / Saturday / Sunday"},
                     {"value": SCHEDULE_PER_DAY, "label": "Individual days"},
+                ])
+            ),
+            vol.Required(CONF_MINUTE_GRANULARITY, default=options[CONF_MINUTE_GRANULARITY]): SelectSelector(
+                SelectSelectorConfig(options=[
+                    {"value": str(step), "label": f"{step} minute{'s' if step != 1 else ''}"}
+                    for step in (1, 2, 5, 10, 15, 30)
                 ])
             ),
             vol.Optional(CONF_PRIMARY_PRE_MEDIA, default=_media_default(options[CONF_PRIMARY_PRE_MEDIA])): MEDIA_SELECTOR,

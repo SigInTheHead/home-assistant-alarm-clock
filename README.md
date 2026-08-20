@@ -15,6 +15,8 @@ All normal controls are exposed as Home Assistant entities. No helper, timer, sc
 
 Choose the mode in **Settings → Devices & services → Alarm Clock → Configure**. `Compact` provides Weekday, Saturday, and Sunday times. `Per-day` provides separately enabled Monday–Friday times while retaining the same single Saturday and Sunday controls. Changing from Compact copies Weekday to Monday–Friday. Changing back uses the earliest enabled weekday time.
 
+Choose **Minute granularity** in the same Configure screen to set the editor's minute-arrow step: 1, 2, 5, 10, 15, or 30 minutes.
+
 ## Optional Lovelace cards
 
 The integration works without custom frontend resources. To use the optional summary and editor cards, register the JavaScript module after installing the integration and restarting Home Assistant:
