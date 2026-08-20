@@ -4,7 +4,15 @@ from __future__ import annotations
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity import Entity
 
-from .const import CONF_MINUTE_GRANULARITY, CONF_NAME, DOMAIN
+from .const import (
+    CONF_MINUTE_GRANULARITY,
+    CONF_NAME,
+    CONF_OVERRIDE_TIME,
+    CONF_SATURDAY_TIME,
+    CONF_SUNDAY_TIME,
+    CONF_WEEKDAY_TIME,
+    DOMAIN,
+)
 
 class MorningAlarmEntity(Entity):
     """Entity attached to exactly one alarm device."""
@@ -28,6 +36,12 @@ class MorningAlarmEntity(Entity):
             "alarm_clock_entry_id": self.coordinator.entry.entry_id,
             "alarm_clock_key": self.key,
             "minute_granularity": self.coordinator.options[CONF_MINUTE_GRANULARITY],
+            # Let summary cards render the core schedule from their configured
+            # root entity even while Home Assistant is loading sibling entities.
+            CONF_WEEKDAY_TIME: self.coordinator.options[CONF_WEEKDAY_TIME],
+            CONF_SATURDAY_TIME: self.coordinator.options[CONF_SATURDAY_TIME],
+            CONF_SUNDAY_TIME: self.coordinator.options[CONF_SUNDAY_TIME],
+            CONF_OVERRIDE_TIME: self.coordinator.options[CONF_OVERRIDE_TIME],
         }
 
     async def async_added_to_hass(self) -> None:
