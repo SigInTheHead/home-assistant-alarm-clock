@@ -7,7 +7,7 @@ Alarm Clock is a HACS custom integration for independent, configurable wake-up a
 1. Add this repository as a HACS **Integration** and download it.
 2. Restart Home Assistant.
 3. Go to **Settings → Devices & services → Add Integration → Alarm Clock**.
-4. Enter the alarm name and target media player. Use **Configure** on the integration entry to choose alarm media.
+4. Enter the alarm name and target media player. Use **Configure** on the integration entry to choose alarm media. Each alarm has one output speaker; every selected alarm sound is played on that speaker.
 
 All normal controls are exposed as Home Assistant entities. No helper, timer, script, or automation YAML is required.
 

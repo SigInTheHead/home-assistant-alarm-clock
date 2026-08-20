@@ -7,7 +7,15 @@ from typing import Any
 import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.const import CONF_NAME
-from homeassistant.helpers.selector import EntitySelector, EntitySelectorConfig, MediaSelector, NumberSelector, NumberSelectorConfig, NumberSelectorMode
+from homeassistant.helpers.selector import (
+    EntitySelector,
+    EntitySelectorConfig,
+    MediaSelector,
+    MediaSelectorConfig,
+    NumberSelector,
+    NumberSelectorConfig,
+    NumberSelectorMode,
+)
 
 from .const import (
     CONF_DAY_ENABLED, CONF_DAY_TIMES, CONF_FOLLOWUP_MAIN_MEDIA, CONF_FOLLOWUP_PRE_MEDIA,
@@ -16,7 +24,22 @@ from .const import (
 )
 
 def _media_default(value: Any) -> Any:
+    """Return a media default suitable for the single-output picker.
+
+    Older entries can contain ``entity_id`` because MediaSelector used to ask
+    for a player beside every media item. That value is no longer meaningful
+    (and is invalid for an ``accept``-filtered selector), so retain only the
+    selected media details.
+    """
+    if isinstance(value, Mapping):
+        return {key: item for key, item in value.items() if key != "entity_id"}
     return value or None
+
+
+# A media selector normally asks for the player used to browse each item.  The
+# alarm has one deliberate output target, configured above, so constrain each
+# picker to audio and let the coordinator always play it on that target.
+MEDIA_SELECTOR = MediaSelector(MediaSelectorConfig(accept=["audio/*"]))
 
 class MorningAlarmConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Create independent alarm config entries."""
@@ -60,8 +83,8 @@ class MorningAlarmOptionsFlow(config_entries.OptionsFlow):
         return vol.Schema({
             vol.Required(ALARM_NAME, default=self.config_entry.data[ALARM_NAME]): str,
             vol.Required(CONF_MEDIA_PLAYER, default=self.config_entry.data[CONF_MEDIA_PLAYER]): EntitySelector(EntitySelectorConfig(domain="media_player")),
-            vol.Optional(CONF_PRIMARY_PRE_MEDIA, default=_media_default(options[CONF_PRIMARY_PRE_MEDIA])): MediaSelector(),
-            vol.Optional(CONF_PRIMARY_MAIN_MEDIA, default=_media_default(options[CONF_PRIMARY_MAIN_MEDIA])): MediaSelector(),
-            vol.Optional(CONF_FOLLOWUP_PRE_MEDIA, default=_media_default(options[CONF_FOLLOWUP_PRE_MEDIA])): MediaSelector(),
-            vol.Optional(CONF_FOLLOWUP_MAIN_MEDIA, default=_media_default(options[CONF_FOLLOWUP_MAIN_MEDIA])): MediaSelector(),
+            vol.Optional(CONF_PRIMARY_PRE_MEDIA, default=_media_default(options[CONF_PRIMARY_PRE_MEDIA])): MEDIA_SELECTOR,
+            vol.Optional(CONF_PRIMARY_MAIN_MEDIA, default=_media_default(options[CONF_PRIMARY_MAIN_MEDIA])): MEDIA_SELECTOR,
+            vol.Optional(CONF_FOLLOWUP_PRE_MEDIA, default=_media_default(options[CONF_FOLLOWUP_PRE_MEDIA])): MEDIA_SELECTOR,
+            vol.Optional(CONF_FOLLOWUP_MAIN_MEDIA, default=_media_default(options[CONF_FOLLOWUP_MAIN_MEDIA])): MEDIA_SELECTOR,
         })
