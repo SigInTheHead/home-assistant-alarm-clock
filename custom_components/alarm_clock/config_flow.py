@@ -22,7 +22,7 @@ from homeassistant.helpers.selector import (
 from .const import (
     CONF_DAY_ENABLED, CONF_DAY_TIMES, CONF_FOLLOWUP_MAIN_MEDIA, CONF_FOLLOWUP_PRE_MEDIA,
     CONF_MEDIA_PLAYER, CONF_NAME as ALARM_NAME, CONF_PRIMARY_MAIN_MEDIA, CONF_PRIMARY_PRE_MEDIA,
-    CONF_SCHEDULE_MODE, DAYS, DEFAULT_OPTIONS, DOMAIN, SCHEDULE_COMPACT,
+    CONF_SCHEDULE_MODE, DEFAULT_OPTIONS, DOMAIN, SCHEDULE_COMPACT,
     SCHEDULE_PER_DAY, WEEKDAY_DAYS,
 )
 
@@ -55,10 +55,8 @@ def _with_schedule_mode(options: dict[str, Any], mode: str) -> dict[str, Any]:
         times = dict(updated[CONF_DAY_TIMES])
         for day in WEEKDAY_DAYS:
             times[day] = updated["weekday_time"]
-        times["saturday"] = updated["saturday_time"]
-        times["sunday"] = updated["sunday_time"]
         updated[CONF_DAY_TIMES] = times
-        updated[CONF_DAY_ENABLED] = {day: True for day in DAYS}
+        updated[CONF_DAY_ENABLED] = {day: True for day in WEEKDAY_DAYS}
     else:
         enabled_weekdays = [
             updated[CONF_DAY_TIMES][day]
@@ -67,8 +65,6 @@ def _with_schedule_mode(options: dict[str, Any], mode: str) -> dict[str, Any]:
         ]
         if enabled_weekdays:
             updated["weekday_time"] = min(enabled_weekdays)
-        updated["saturday_time"] = updated[CONF_DAY_TIMES]["saturday"]
-        updated["sunday_time"] = updated[CONF_DAY_TIMES]["sunday"]
     updated[CONF_SCHEDULE_MODE] = mode
     return updated
 

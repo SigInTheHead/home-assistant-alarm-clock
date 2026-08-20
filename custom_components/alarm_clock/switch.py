@@ -4,7 +4,7 @@ from __future__ import annotations
 from homeassistant.components.switch import SwitchEntity
 from homeassistant.util import slugify
 
-from .const import CONF_DAY_ENABLED, CONF_ENABLED, CONF_FOLLOWUP_ENABLED, CONF_FOLLOWUP_PRE_ENABLED, CONF_FOLLOWUP_REUSE_PRIMARY, CONF_OVERRIDE, CONF_PRIMARY_PRE_ENABLED, DAYS, SCHEDULE_PER_DAY
+from .const import CONF_DAY_ENABLED, CONF_ENABLED, CONF_FOLLOWUP_ENABLED, CONF_FOLLOWUP_PRE_ENABLED, CONF_FOLLOWUP_REUSE_PRIMARY, CONF_OVERRIDE, CONF_PRIMARY_PRE_ENABLED, SCHEDULE_PER_DAY, WEEKDAY_DAYS
 from .entity import MorningAlarmEntity
 
 class AlarmSwitch(MorningAlarmEntity, SwitchEntity):
@@ -38,5 +38,5 @@ async def async_setup_entry(hass, entry, async_add_entities):
         AlarmSwitch(c, CONF_PRIMARY_PRE_ENABLED, "Primary pre-alarm"), AlarmSwitch(c, CONF_FOLLOWUP_ENABLED, "Follow-up"),
         AlarmSwitch(c, CONF_FOLLOWUP_PRE_ENABLED, "Follow-up pre-alarm"), AlarmSwitch(c, CONF_FOLLOWUP_REUSE_PRIMARY, "Reuse primary media"),
     ]
-    entities.extend(AlarmSwitch(c, f"{day}_enabled", day.title(), day) for day in DAYS)
+    entities.extend(AlarmSwitch(c, f"{day}_enabled", day.title(), day) for day in WEEKDAY_DAYS)
     async_add_entities(entities)

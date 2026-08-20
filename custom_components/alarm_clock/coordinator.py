@@ -107,7 +107,7 @@ class MorningAlarmCoordinator:
 
     def _normal_time_for(self, date) -> Any | None:
         options, weekday = self.options, date.weekday()
-        if options[CONF_SCHEDULE_MODE] == SCHEDULE_PER_DAY:
+        if options[CONF_SCHEDULE_MODE] == SCHEDULE_PER_DAY and weekday < 5:
             day = DAYS[weekday]
             if not options[CONF_DAY_ENABLED].get(day, True): return None
             return self._time(options[CONF_DAY_TIMES].get(day, "07:00:00"))
@@ -153,13 +153,11 @@ class MorningAlarmCoordinator:
             if value == SCHEDULE_PER_DAY:
                 times = dict(options[CONF_DAY_TIMES])
                 for day in WEEKDAY_DAYS: times[day] = options[CONF_WEEKDAY_TIME]
-                times["saturday"], times["sunday"] = options[CONF_SATURDAY_TIME], options[CONF_SUNDAY_TIME]
-                options[CONF_DAY_TIMES], options[CONF_DAY_ENABLED] = times, {day: True for day in DAYS}
+                options[CONF_DAY_TIMES] = times
+                options[CONF_DAY_ENABLED] = {day: True for day in WEEKDAY_DAYS}
             else:
                 enabled = [options[CONF_DAY_TIMES][day] for day in WEEKDAY_DAYS if options[CONF_DAY_ENABLED].get(day, True)]
                 if enabled: options[CONF_WEEKDAY_TIME] = min(enabled)
-                options[CONF_SATURDAY_TIME] = options[CONF_DAY_TIMES]["saturday"]
-                options[CONF_SUNDAY_TIME] = options[CONF_DAY_TIMES]["sunday"]
         options[key] = value
         self.hass.config_entries.async_update_entry(self.entry, options=options)
         if key == CONF_ENABLED and not value and self._occurrence:
