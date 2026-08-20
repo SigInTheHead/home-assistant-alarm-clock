@@ -13,4 +13,4 @@ class StatusSensor(MorningAlarmEntity, SensorEntity):
     @property
     def native_value(self): return self.coordinator.status
 async def async_setup_entry(hass,entry,async_add_entities):
-    c=hass.data["morning_alarm"][entry.entry_id]["coordinator"]; async_add_entities([NextAlarmSensor(c),StatusSensor(c)])
+    c=hass.data["alarm_clock"][entry.entry_id]["coordinator"]; async_add_entities([NextAlarmSensor(c),StatusSensor(c)])

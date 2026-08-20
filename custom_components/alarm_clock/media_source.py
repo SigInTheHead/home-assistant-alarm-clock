@@ -14,16 +14,16 @@ TONES = {
 }
 
 class MorningAlarmMediaSource(MediaSource):
-    name = "Morning Alarm"
+    name = "Alarm Clock"
     def __init__(self, hass: HomeAssistant) -> None:
         super().__init__(DOMAIN); self.hass = hass
     async def async_resolve_media(self, item: MediaSourceItem) -> PlayMedia:
         tone = item.identifier
-        if tone not in TONES: raise Unresolvable("Unknown Morning Alarm sound")
-        return PlayMedia(f"/api/morning_alarm/media/{tone}.wav", "audio/wav")
+        if tone not in TONES: raise Unresolvable("Unknown Alarm Clock sound")
+        return PlayMedia(f"/api/alarm_clock/media/{tone}.wav", "audio/wav")
     async def async_browse_media(self, item: MediaSourceItem) -> BrowseMediaSource:
-        if item.identifier: raise Unresolvable("Morning Alarm sounds have no subfolders")
-        return BrowseMediaSource(domain=DOMAIN, identifier="", media_class=MediaClass.DIRECTORY, media_content_type=MediaType.MUSIC, title="Morning Alarm", can_play=False, can_expand=True, children=[
+        if item.identifier: raise Unresolvable("Alarm Clock sounds have no subfolders")
+        return BrowseMediaSource(domain=DOMAIN, identifier="", media_class=MediaClass.DIRECTORY, media_content_type=MediaType.MUSIC, title="Alarm Clock", can_play=False, can_expand=True, children=[
             BrowseMediaSource(domain=DOMAIN, identifier=key, media_class=MediaClass.MUSIC, media_content_type="audio/wav", title=title, can_play=True, can_expand=False) for key,(title, _) in TONES.items()
         ])
 

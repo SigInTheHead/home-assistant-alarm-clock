@@ -1,4 +1,4 @@
-"""Scheduling and playback runtime for one Morning Alarm entry."""
+"""Scheduling and playback runtime for one Alarm Clock entry."""
 from __future__ import annotations
 
 import asyncio

@@ -1,4 +1,4 @@
-"""Time entities for Morning Alarm schedules."""
+"""Time entities for Alarm Clock schedules."""
 from __future__ import annotations
 
 from datetime import time
@@ -22,7 +22,7 @@ class AlarmTime(MorningAlarmEntity, TimeEntity):
         else: await self.coordinator.async_set_option(self.key, value.isoformat())
 
 async def async_setup_entry(hass, entry, async_add_entities):
-    c=hass.data["morning_alarm"][entry.entry_id]["coordinator"]
+    c=hass.data["alarm_clock"][entry.entry_id]["coordinator"]
     out=[AlarmTime(c, CONF_WEEKDAY_TIME,"Weekday",SCHEDULE_COMPACT),AlarmTime(c,CONF_SATURDAY_TIME,"Saturday",SCHEDULE_COMPACT),AlarmTime(c,CONF_SUNDAY_TIME,"Sunday",SCHEDULE_COMPACT),AlarmTime(c,CONF_OVERRIDE_TIME,"Override time")]
     out += [AlarmTime(c, f"{day}_time", day.title(), SCHEDULE_PER_DAY, day) for day in DAYS]
     async_add_entities(out)

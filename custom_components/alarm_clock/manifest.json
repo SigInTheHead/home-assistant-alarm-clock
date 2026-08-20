@@ -1,6 +1,6 @@
 {
-  "domain": "morning_alarm",
-  "name": "Morning Alarm",
+  "domain": "alarm_clock",
+  "name": "Alarm Clock",
   "codeowners": [],
   "config_flow": true,
   "integration_type": "service",

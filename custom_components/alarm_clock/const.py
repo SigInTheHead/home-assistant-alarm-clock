@@ -1,10 +1,10 @@
-"""Constants for Morning Alarm."""
+"""Constants for Alarm Clock."""
 from __future__ import annotations
 
 from datetime import time
 from homeassistant.const import Platform
 
-DOMAIN = "morning_alarm"
+DOMAIN = "alarm_clock"
 PLATFORMS = [Platform.SWITCH, Platform.TIME, Platform.NUMBER, Platform.SELECT, Platform.SENSOR]
 DATA_COORDINATOR = "coordinator"
 

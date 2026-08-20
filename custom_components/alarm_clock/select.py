@@ -10,4 +10,4 @@ class ScheduleModeSelect(MorningAlarmEntity, SelectEntity):
     @property
     def current_option(self): return self.coordinator.options[CONF_SCHEDULE_MODE]
     async def async_select_option(self, option): await self.coordinator.async_set_option(CONF_SCHEDULE_MODE,option)
-async def async_setup_entry(hass,entry,async_add_entities): async_add_entities([ScheduleModeSelect(hass.data["morning_alarm"][entry.entry_id]["coordinator"])])
+async def async_setup_entry(hass,entry,async_add_entities): async_add_entities([ScheduleModeSelect(hass.data["alarm_clock"][entry.entry_id]["coordinator"])])

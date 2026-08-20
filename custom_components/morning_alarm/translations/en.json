@@ -1,4 +1,0 @@
-{
-  "config": {"step": {"user": {"title": "Create Morning Alarm", "data": {"name": "Alarm name", "media_player": "Media player"}}, "error": {"duplicate_name": "An alarm with this name already exists"}}},
-  "options": {"step": {"init": {"title": "Configure Morning Alarm", "data": {"name": "Alarm name", "media_player": "Media player", "primary_pre_media": "Primary pre-alarm media", "primary_main_media": "Primary main media", "followup_pre_media": "Follow-up pre-alarm media", "followup_main_media": "Follow-up main media"}}}, "error": {"duplicate_name": "An alarm with this name already exists", "invalid_name": "Enter an alarm name"}}
-}

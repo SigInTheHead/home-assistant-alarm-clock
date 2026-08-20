@@ -1,8 +1,8 @@
-# Morning Alarm — Home Assistant Custom Integration Specification
+# Alarm Clock — Home Assistant Custom Integration Specification
 
 ## 1. Purpose
 
-Build a HACS-installable Home Assistant custom integration named **Morning Alarm** that replaces the current collection of helpers, timers, scripts, and automations used to implement configurable wake-up alarms.
+Build a HACS-installable Home Assistant custom integration named **Alarm Clock** that replaces the current collection of helpers, timers, scripts, and automations used to implement configurable wake-up alarms.
 
 The integration must support **multiple independent alarm instances**, so a separate alarm can be created for each member of a household.
 
@@ -32,9 +32,9 @@ The primary and follow-up alarm stages must have independent media and volume se
 
 ## 3. Example User Experience
 
-A user installs **Morning Alarm** from HACS, restarts Home Assistant, then selects:
+A user installs **Alarm Clock** from HACS, restarts Home Assistant, then selects:
 
-**Settings → Devices & services → Add Integration → Morning Alarm**
+**Settings → Devices & services → Add Integration → Alarm Clock**
 
 The setup flow creates one alarm instance.
 
@@ -48,10 +48,10 @@ Media player: Bedroom Speaker
 The user can later create additional instances:
 
 ```text
-Morning Alarm - Tim
-Morning Alarm - Julie
-Morning Alarm - Josh
-Morning Alarm - Ollie
+Alarm Clock - Tim
+Alarm Clock - Julie
+Alarm Clock - Josh
+Alarm Clock - Ollie
 ```
 
 Each instance appears as its own Home Assistant device with its own schedule and controls.
@@ -59,9 +59,9 @@ Each instance appears as its own Home Assistant device with its own schedule and
 ## 4. Proposed Repository Structure
 
 ```text
-ha-morning-alarm/
+ha-alarm-clock/
 ├── custom_components/
-│   └── morning_alarm/
+│   └── alarm_clock/
 │       ├── __init__.py
 │       ├── manifest.json
 │       ├── const.py
@@ -130,7 +130,7 @@ Each alarm instance should create a Home Assistant device.
 For an instance named `Tim`, suggested entities are:
 
 ```text
-switch.tim_morning_alarm
+switch.tim_alarm_clock
 switch.tim_alarm_override
 
 time.tim_weekday_alarm
@@ -142,8 +142,8 @@ time.tim_override_alarm
 Optional diagnostic/status entities:
 
 ```text
-sensor.tim_morning_alarm_next_alarm
-sensor.tim_morning_alarm_status
+sensor.tim_alarm_clock_next_alarm
+sensor.tim_alarm_clock_status
 ```
 
 Possible status values:
@@ -475,7 +475,7 @@ Desired presentation:
 
 ```text
 Media
-└── Morning Alarm
+└── Alarm Clock
     ├── Soft Beep
     ├── Soft Chime
     └── Gentle Alarm
@@ -634,9 +634,9 @@ Each config entry should create one HA device.
 Example:
 
 ```text
-Device: Morning Alarm - Tim
+Device: Alarm Clock - Tim
 Manufacturer: Custom Integration
-Model: Morning Alarm
+Model: Alarm Clock
 ```
 
 Associated entities:
@@ -659,7 +659,7 @@ The device name should include the user-defined alarm name.
 There is an existing custom Lovelace card:
 
 ```yaml
-type: custom:morning-alarm-card
+type: custom:alarm-clock-card
 ```
 
 The existing card currently reads helper entities such as:
@@ -679,7 +679,7 @@ Do not make the integration depend on the custom card.
 
 The integration must work fully using standard Home Assistant UI controls.
 
-A later version of the card may support selecting a Morning Alarm device/config entry instead of manually specifying individual entities.
+A later version of the card may support selecting an Alarm Clock device/config entry instead of manually specifying individual entities.
 
 ## 25. Existing Behaviour to Preserve
 
@@ -800,17 +800,17 @@ These should not complicate the first release.
 Consider exposing integration actions such as:
 
 ```text
-morning_alarm.trigger
-morning_alarm.trigger_follow_up
-morning_alarm.stop
-morning_alarm.enable_override
-morning_alarm.cancel_override
+alarm_clock.trigger
+alarm_clock.trigger_follow_up
+alarm_clock.stop
+alarm_clock.enable_override
+alarm_clock.cancel_override
 ```
 
 Example intended use:
 
 ```yaml
-action: morning_alarm.trigger
+action: alarm_clock.trigger
 target:
   device_id: ...
 ```
@@ -873,7 +873,7 @@ V1 is complete when:
 
 1. The integration can be installed as a HACS custom repository.
 2. Home Assistant discovers it under Add Integration.
-3. Multiple Morning Alarm instances can be created.
+3. Multiple Alarm Clock instances can be created.
 4. Each instance can select its own media player.
 5. Each instance exposes enabled, override, weekday, Saturday, Sunday, and override-time entities.
 6. Weekday/Saturday/Sunday scheduling works.
@@ -964,13 +964,13 @@ Avoid naming the integration simply `alarm` because Home Assistant already has a
 Suggested domain:
 
 ```text
-morning_alarm
+alarm_clock
 ```
 
 Suggested display name:
 
 ```text
-Morning Alarm
+Alarm Clock
 ```
 
 ## 33. Codex Task

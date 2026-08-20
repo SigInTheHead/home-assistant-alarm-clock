@@ -6,8 +6,8 @@ from .media_source import TONES
 from .tones import wav_for
 
 class MorningAlarmToneView(HomeAssistantView):
-    url = "/api/morning_alarm/media/{tone}.wav"
-    name = "api:morning_alarm:media"
+    url = "/api/alarm_clock/media/{tone}.wav"
+    name = "api:alarm_clock:media"
     requires_auth = False
     async def get(self, request, tone: str):
         if tone not in TONES: raise web.HTTPNotFound()

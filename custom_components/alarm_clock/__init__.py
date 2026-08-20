@@ -1,4 +1,4 @@
-"""Morning Alarm integration setup."""
+"""Alarm Clock integration setup."""
 from __future__ import annotations
 
 import voluptuous as vol
@@ -17,7 +17,7 @@ type MorningAlarmConfigEntry = ConfigEntry
 async def async_setup(hass: HomeAssistant, config: dict) -> bool:
     """Set up domain-level actions."""
     await hass.http.async_register_static_paths([
-        StaticPathConfig("/morning_alarm", str(Path(__file__).parent / "frontend"), cache_headers=False),
+        StaticPathConfig("/alarm_clock", str(Path(__file__).parent / "frontend"), cache_headers=False),
     ])
     hass.http.register_view(MorningAlarmToneView())
     async def _service(call: ServiceCall) -> None:

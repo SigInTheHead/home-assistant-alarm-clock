@@ -1,4 +1,4 @@
-"""Configuration and options flow for Morning Alarm."""
+"""Configuration and options flow for Alarm Clock."""
 from __future__ import annotations
 
 from collections.abc import Mapping

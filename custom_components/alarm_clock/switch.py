@@ -1,4 +1,4 @@
-"""Switch entities for Morning Alarm."""
+"""Switch entities for Alarm Clock."""
 from __future__ import annotations
 
 from homeassistant.components.switch import SwitchEntity
@@ -27,7 +27,7 @@ class AlarmSwitch(MorningAlarmEntity, SwitchEntity):
         else: await self.coordinator.async_set_option(self.key, False)
 
 async def async_setup_entry(hass, entry, async_add_entities):
-    c = hass.data["morning_alarm"][entry.entry_id]["coordinator"]
+    c = hass.data["alarm_clock"][entry.entry_id]["coordinator"]
     entities = [
         AlarmSwitch(c, CONF_ENABLED, "Enabled"), AlarmSwitch(c, CONF_OVERRIDE, "Override"),
         AlarmSwitch(c, CONF_PRIMARY_PRE_ENABLED, "Primary pre-alarm"), AlarmSwitch(c, CONF_FOLLOWUP_ENABLED, "Follow-up"),
