@@ -17,17 +17,26 @@ All normal controls are exposed as Home Assistant entities. No helper, timer, sc
 
 ## Optional Lovelace cards
 
-The integration works without custom frontend resources. To use the optional summary and editor cards, add this JavaScript module as a Lovelace **module** resource:
+The integration works without custom frontend resources. To use the optional summary and editor cards, register the JavaScript module after installing the integration and restarting Home Assistant:
+
+1. Go to **Settings → Dashboards**.
+2. Open the three-dot menu in the top-right and select **Resources**.
+3. Click **Add resource**.
+4. Enter the following URL and select **JavaScript module** as its type:
 
 ```text
 /alarm_clock/alarm-clock.js
 ```
 
+5. Save, then hard-refresh the browser.
+
+The module is served by the installed Alarm Clock integration; do not copy it into `/config/www`.
+
 Example summary card:
 
 ```yaml
 type: custom:alarm-clock-card
-entity: switch.tim_alarm_clock_enabled
+entity: switch.tim_alarm_clock
 navigation_path: /kitchen-control/alarm
 ```
 
@@ -35,10 +44,10 @@ Example editor card on that view:
 
 ```yaml
 type: custom:alarm-clock-editor-card
-entity: switch.tim_alarm_clock_enabled
+entity: switch.tim_alarm_clock
 ```
 
-The exact generated entity ID is determined by Home Assistant's entity registry; select the device's **Enabled** entity in the card editor rather than relying on the example ID.
+The root switch is the alarm's canonical entity (for example, `switch.tim_alarm_clock`). Select the device's **Alarm Clock** entity in the card editor; it controls the whole alarm and lets the cards locate all sibling entities.
 
 ## Playback behaviour
 

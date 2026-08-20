@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from homeassistant.components.switch import SwitchEntity
+from homeassistant.util import slugify
 
 from .const import CONF_DAY_ENABLED, CONF_ENABLED, CONF_FOLLOWUP_ENABLED, CONF_FOLLOWUP_PRE_ENABLED, CONF_FOLLOWUP_REUSE_PRIMARY, CONF_OVERRIDE, CONF_PRIMARY_PRE_ENABLED, DAYS, SCHEDULE_PER_DAY
 from .entity import MorningAlarmEntity
@@ -9,6 +10,10 @@ from .entity import MorningAlarmEntity
 class AlarmSwitch(MorningAlarmEntity, SwitchEntity):
     def __init__(self, coordinator, key, name, day: str | None = None) -> None:
         super().__init__(coordinator, key, name); self.day = day
+        if key == CONF_ENABLED:
+            # This is the alarm's canonical entity, used by dashboards/cards to
+            # locate the device's sibling schedule and playback controls.
+            self._attr_suggested_object_id = f"{slugify(coordinator.entry.data['name'])}_alarm_clock"
     @property
     def available(self):
         return not self.day or self.coordinator.options["schedule_mode"] == SCHEDULE_PER_DAY
@@ -29,7 +34,7 @@ class AlarmSwitch(MorningAlarmEntity, SwitchEntity):
 async def async_setup_entry(hass, entry, async_add_entities):
     c = hass.data["alarm_clock"][entry.entry_id]["coordinator"]
     entities = [
-        AlarmSwitch(c, CONF_ENABLED, "Enabled"), AlarmSwitch(c, CONF_OVERRIDE, "Override"),
+        AlarmSwitch(c, CONF_ENABLED, "Alarm Clock"), AlarmSwitch(c, CONF_OVERRIDE, "Override"),
         AlarmSwitch(c, CONF_PRIMARY_PRE_ENABLED, "Primary pre-alarm"), AlarmSwitch(c, CONF_FOLLOWUP_ENABLED, "Follow-up"),
         AlarmSwitch(c, CONF_FOLLOWUP_PRE_ENABLED, "Follow-up pre-alarm"), AlarmSwitch(c, CONF_FOLLOWUP_REUSE_PRIMARY, "Reuse primary media"),
     ]

@@ -2,7 +2,7 @@
 const esc = (v) => String(v ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 
 class AlarmClockBase extends HTMLElement {
-  setConfig(config) { if (!config.entity) throw new Error("Set entity to the Alarm Clock Enabled switch"); this.config = config; this.render(); }
+  setConfig(config) { if (!config.entity) throw new Error("Set entity to the root Alarm Clock switch"); this.config = config; this.render(); }
   set hass(hass) { this._hass = hass; this.render(); }
   connectedCallback() { this.attachShadow({ mode: "open" }); this.render(); }
   entities() { const entryId = this._hass?.states?.[this.config?.entity]?.attributes?.alarm_clock_entry_id; return Object.entries(this._hass?.states || {}).filter(([, state]) => state.attributes?.alarm_clock_entry_id === entryId).map(([entity_id, state]) => ({ entity_id, state, key: state.attributes.alarm_clock_key })); }
