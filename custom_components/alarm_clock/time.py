@@ -24,5 +24,8 @@ class AlarmTime(MorningAlarmEntity, TimeEntity):
 async def async_setup_entry(hass, entry, async_add_entities):
     c=hass.data["alarm_clock"][entry.entry_id]["coordinator"]
     out=[AlarmTime(c, CONF_WEEKDAY_TIME,"Weekday",SCHEDULE_COMPACT),AlarmTime(c,CONF_SATURDAY_TIME,"Saturday",SCHEDULE_COMPACT),AlarmTime(c,CONF_SUNDAY_TIME,"Sunday",SCHEDULE_COMPACT),AlarmTime(c,CONF_OVERRIDE_TIME,"Override time")]
-    out += [AlarmTime(c, f"{day}_time", day.title(), SCHEDULE_PER_DAY, day) for day in DAYS]
+    # Keep the per-day entities distinct from the compact Saturday/Sunday
+    # entities. Their values come from ``day_times`` via ``day``, so this key
+    # is only an entity identity and must not overlap a compact option key.
+    out += [AlarmTime(c, f"per_day_{day}_time", day.title(), SCHEDULE_PER_DAY, day) for day in DAYS]
     async_add_entities(out)

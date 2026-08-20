@@ -71,7 +71,11 @@ class MorningAlarmOptionsFlow(config_entries.OptionsFlow):
             data = {**self.config_entry.data, ALARM_NAME: user_input[ALARM_NAME].strip(), CONF_MEDIA_PLAYER: user_input[CONF_MEDIA_PLAYER]}
             if not data[ALARM_NAME]:
                 return self.async_show_form(step_id="init", data_schema=self._schema(options), errors={ALARM_NAME: "invalid_name"})
-            duplicate = any(e.entry_id != self.config_entry.entry_id and e.title.casefold() == data[ALARM_NAME].casefold() for e in self._async_current_entries())
+            duplicate = any(
+                entry.entry_id != self.config_entry.entry_id
+                and entry.title.casefold() == data[ALARM_NAME].casefold()
+                for entry in self.hass.config_entries.async_entries(DOMAIN)
+            )
             if duplicate:
                 return self.async_show_form(step_id="init", data_schema=self._schema(options), errors={ALARM_NAME: "duplicate_name"})
             new_options = {**options, **{key: user_input.get(key) for key in (CONF_PRIMARY_PRE_MEDIA, CONF_PRIMARY_MAIN_MEDIA, CONF_FOLLOWUP_PRE_MEDIA, CONF_FOLLOWUP_MAIN_MEDIA)}}
