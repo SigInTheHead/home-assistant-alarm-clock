@@ -5,10 +5,13 @@ from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity import Entity
 
 from .const import (
+    CONF_DAY_ENABLED,
+    CONF_DAY_TIMES,
     CONF_MINUTE_GRANULARITY,
     CONF_NAME,
     CONF_OVERRIDE_TIME,
     CONF_SATURDAY_TIME,
+    CONF_SCHEDULE_MODE,
     CONF_SUNDAY_TIME,
     CONF_WEEKDAY_TIME,
     DOMAIN,
@@ -36,6 +39,9 @@ class MorningAlarmEntity(Entity):
             "alarm_clock_entry_id": self.coordinator.entry.entry_id,
             "alarm_clock_key": self.key,
             "minute_granularity": self.coordinator.options[CONF_MINUTE_GRANULARITY],
+            CONF_SCHEDULE_MODE: self.coordinator.options[CONF_SCHEDULE_MODE],
+            CONF_DAY_TIMES: self.coordinator.options[CONF_DAY_TIMES],
+            CONF_DAY_ENABLED: self.coordinator.options[CONF_DAY_ENABLED],
             # Let summary cards render the core schedule from their configured
             # root entity even while Home Assistant is loading sibling entities.
             CONF_WEEKDAY_TIME: self.coordinator.options[CONF_WEEKDAY_TIME],

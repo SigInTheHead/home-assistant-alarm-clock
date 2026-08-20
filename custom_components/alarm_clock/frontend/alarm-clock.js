@@ -22,6 +22,12 @@ class AlarmClockBase extends HTMLElement {
   entities() { const entryId = this._hass?.states?.[this.config?.entity]?.attributes?.alarm_clock_entry_id; return Object.entries(this._hass?.states || {}).filter(([, state]) => state.attributes?.alarm_clock_entry_id === entryId).map(([entity_id, state]) => ({ entity_id, state, key: state.attributes.alarm_clock_key })); }
   find(key) { return this.entities().find((item) => item.key === key); }
   value(key) { return this.find(key)?.state.state ?? this._hass?.states?.[this.config?.entity]?.attributes?.[key]; }
+  scheduleMode() {
+    const configured = this.value("schedule_mode");
+    if (configured) return configured;
+    const monday = this.find("per_day_monday_time")?.state;
+    return monday && monday.state !== "unavailable" ? "per_day" : "compact";
+  }
   async set(key, domain, service, data) { const item = this.find(key); if (item) await this._hass.callService(domain, service, { entity_id: item.entity_id, ...data }); }
   styles() { return `<style>:host{display:block}ha-card{padding:16px}h2{display:flex;align-items:center;gap:8px;margin:0}.heading{display:flex;flex-direction:column;gap:2px}.heading .sub{font-weight:normal}h2 ha-icon{--mdc-icon-size:28px}h2 ha-icon.enabled{color:var(--primary-color)!important}h2 ha-icon.disabled{color:var(--disabled-text-color,#9e9e9e)!important}.summary{padding:12px}.summary h2{font-size:16px;line-height:1.2}.summary h2 ha-icon{--mdc-icon-size:24px}.summary .sub{font-size:12px}.sub,label{color:var(--secondary-text-color);font-size:13px}.row{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px 0;border-top:1px solid var(--divider-color)}.override{border-top:0}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(125px,1fr));gap:8px;margin:12px 0}.box{background:var(--secondary-background-color);border-radius:8px;padding:9px}input,select,button{font:inherit;padding:6px;border-radius:6px;background:var(--secondary-background-color);color:var(--primary-text-color);border:1px solid var(--divider-color)}.time-controls{display:grid;grid-template-columns:1fr 14px 1fr;justify-items:center;align-items:center;margin-top:6px}.time-controls button{width:100%;padding:2px;border:0;background:transparent;font-size:18px;line-height:1;cursor:pointer}.time-value{font-size:20px;font-weight:600;padding:5px 0}.time-separator{font-size:18px}.hidden{display:none}</style>`; }
 }
@@ -34,7 +40,10 @@ class AlarmClockCard extends AlarmClockBase {
   }
   render() {
     if (!this.shadowRoot || !this._hass || !this.config) return;
-    const schedule = [["Mon–Fri", "weekday_time"], ["Saturday", "saturday_time"], ["Sunday", "sunday_time"]];
+    const mode = this.scheduleMode();
+    const schedule = mode === "per_day"
+      ? [["Monday", "per_day_monday_time"], ["Tuesday", "per_day_tuesday_time"], ["Wednesday", "per_day_wednesday_time"], ["Thursday", "per_day_thursday_time"], ["Friday", "per_day_friday_time"], ["Saturday", "saturday_time"], ["Sunday", "sunday_time"]]
+      : [["Mon–Fri", "weekday_time"], ["Saturday", "saturday_time"], ["Sunday", "sunday_time"]];
     const next = this.value("next_alarm");
     const enabled = this._hass.states[this.config.entity]?.state === "on";
     const friendlyNext = () => {
@@ -49,7 +58,7 @@ class AlarmClockCard extends AlarmClockBase {
       return `Next: ${date.toLocaleDateString([], { weekday: "long", day: "numeric", month: "short" })} at ${at}`;
     };
     const features = {
-      alarm_times: this.config.show_alarm_times !== false ? `<div class="grid">${schedule.map(([label,key]) => `<div class="box"><label>${label}</label><br><b>${esc((this.value(key) || "--:--").slice(0,5))}</b></div>`).join("")}</div>` : "",
+      alarm_times: this.config.show_alarm_times !== false ? `<div class="grid">${schedule.map(([label,key]) => `<div class="box"><label>${label}</label><br><b>${esc((this.value(key) || this._hass.states[this.config.entity]?.attributes?.day_times?.[key.replace("per_day_", "").replace("_time", "")] || "--:--").slice(0,5))}</b></div>`).join("")}</div>` : "",
       override: this.config.show_override !== false ? `<div class="row override"><span>Override ${esc((this.value("override_time") || "--:--").slice(0,5))}</span></div>` : "",
     };
     const featureOrder = [...new Set([...(this.config.feature_order || []), "alarm_times", "override"])].filter((key) => key in features);
@@ -150,7 +159,7 @@ class AlarmClockEditorCard extends AlarmClockBase {
   }
   render() {
     if (!this.shadowRoot || !this._hass || !this.config) return;
-    const advanced = this._advanced || false, mode = this.value("schedule_mode") || "compact";
+    const advanced = this._advanced || false, mode = this.scheduleMode();
     const days = ["monday","tuesday","wednesday","thursday","friday"];
     const toggle = (label,key) => `<div class="row"><span>${label}</span><input data-toggle="${key}" type="checkbox" ${this.value(key)==="on"?"checked":""}></div>`;
     const num = (label,key) => `<div class="row"><label>${label}</label><input data-number="${key}" type="number" value="${esc(this.value(key))}"></div>`;
