@@ -87,7 +87,31 @@ class AlarmClockCardConfigEditor extends HTMLElement {
   }
 }
 
+class AlarmClockEditorCardConfigEditor extends HTMLElement {
+  setConfig(config) { this._config = { ...config }; this.render(); }
+  set hass(hass) { this._hass = hass; this.render(); }
+  connectedCallback() { this.attachShadow({ mode: "open" }); this.render(); }
+  render() {
+    if (!this.shadowRoot || !this._config) return;
+    this.shadowRoot.innerHTML = `<style>:host{display:block;padding:12px 0}.field{display:block}.field span{display:block;margin-bottom:6px;color:var(--primary-text-color);font-size:14px}.field small{display:block;margin-top:4px;color:var(--secondary-text-color)}ha-entity-picker{box-sizing:border-box;width:100%;padding:10px;border:1px solid var(--divider-color);border-radius:6px;background:var(--card-background-color)}</style><label class="field"><span>Entity</span><ha-entity-picker id="entity"></ha-entity-picker><small>Select the root Alarm Clock switch.</small></label>`;
+    const entityPicker = this.shadowRoot.querySelector("#entity");
+    entityPicker.hass = this._hass;
+    entityPicker.value = this._config.entity || "";
+    entityPicker.includeDomains = ["switch"];
+    entityPicker.addEventListener("value-changed", (event) => {
+      const config = { ...this._config, entity: event.detail.value };
+      this._config = config;
+      this.dispatchEvent(new CustomEvent("config-changed", { detail: { config }, bubbles: true, composed: true }));
+    });
+  }
+}
+
 class AlarmClockEditorCard extends AlarmClockBase {
+  static getConfigElement() { return document.createElement("alarm-clock-editor-card-config-editor"); }
+  static getStubConfig(hass) {
+    const entity = Object.keys(hass.states).find((id) => hass.states[id].attributes?.alarm_clock_entry_id);
+    return { entity };
+  }
   render() {
     if (!this.shadowRoot || !this._hass || !this.config) return;
     const advanced = this._advanced || false, mode = this.value("schedule_mode") || "compact";
@@ -119,5 +143,6 @@ class AlarmClockEditorCard extends AlarmClockBase {
 customElements.define("alarm-clock-card", AlarmClockCard);
 customElements.define("alarm-clock-editor-card", AlarmClockEditorCard);
 customElements.define("alarm-clock-card-config-editor", AlarmClockCardConfigEditor);
+customElements.define("alarm-clock-editor-card-config-editor", AlarmClockEditorCardConfigEditor);
 window.customCards = window.customCards || [];
 window.customCards.push({ type:"alarm-clock-card", name:"Alarm Clock", description:"Alarm Clock summary" }, { type:"alarm-clock-editor-card", name:"Alarm Clock Editor", description:"Alarm Clock controls" });
