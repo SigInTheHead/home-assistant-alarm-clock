@@ -37,13 +37,11 @@ class MorningAlarmConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
     @staticmethod
     def async_get_options_flow(config_entry: config_entries.ConfigEntry):
-        return MorningAlarmOptionsFlow(config_entry)
+        """Return a handler; Home Assistant assigns its config_entry lifecycle field."""
+        return MorningAlarmOptionsFlow()
 
 class MorningAlarmOptionsFlow(config_entries.OptionsFlow):
     """Edit values that need Home Assistant's native media selector."""
-    def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
-        self.config_entry = config_entry
-
     async def async_step_init(self, user_input: dict[str, Any] | None = None):
         options = {**DEFAULT_OPTIONS, **self.config_entry.options}
         if user_input is not None:
