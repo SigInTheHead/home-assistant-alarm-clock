@@ -49,8 +49,8 @@ class AlarmClockCard extends AlarmClockBase {
       return `Next: ${date.toLocaleDateString([], { weekday: "long", day: "numeric", month: "short" })} at ${at}`;
     };
     const alarmTimes = this.config.show_alarm_times !== false ? `<div class="grid">${schedule.map(([label,key]) => `<div class="box"><label>${label}</label><br><b>${esc((this.value(key) || "--:--").slice(0,5))}</b></div>`).join("")}</div>` : "";
-    this.shadowRoot.innerHTML = `${this.styles()}<ha-card><h2><ha-icon class="${enabled ? "enabled" : "disabled"}" icon="${esc(this.config.icon || "mdi:alarm")}"></ha-icon><span class="heading"><span>${esc(this.config.title || this.config.name || "Alarm Clock")}</span><span class="sub">${esc(friendlyNext())}</span></span></h2>${alarmTimes}<div class="row"><span>Override ${esc((this.value("override_time") || "--:--").slice(0,5))}</span><button id="open">${this.config.navigation_path ? "Open alarm" : "Details"}</button></div></ha-card>`;
-    this.shadowRoot.querySelector("#open").onclick = () => { if (this.config.navigation_path) { history.pushState(null, "", this.config.navigation_path); window.dispatchEvent(new Event("location-changed")); } else this.dispatchEvent(new CustomEvent("hass-more-info", { bubbles:true, composed:true, detail:{entityId:this.config.entity} })); };
+    const override = this.config.show_override !== false ? `<div class="row"><span>Override ${esc((this.value("override_time") || "--:--").slice(0,5))}</span></div>` : "";
+    this.shadowRoot.innerHTML = `${this.styles()}<ha-card><h2><ha-icon class="${enabled ? "enabled" : "disabled"}" icon="${esc(this.config.icon || "mdi:alarm")}"></ha-icon><span class="heading"><span>${esc(this.config.title || this.config.name || "Alarm Clock")}</span><span class="sub">${esc(friendlyNext())}</span></span></h2>${alarmTimes}${override}</ha-card>`;
   }
 }
 
@@ -60,8 +60,14 @@ class AlarmClockCardConfigEditor extends HTMLElement {
   connectedCallback() { this.attachShadow({ mode: "open" }); this.render(); }
   render() {
     if (!this.shadowRoot || !this._config) return;
-    const hasAlarmTimes = this._config.show_alarm_times !== false;
-    this.shadowRoot.innerHTML = `<style>:host{display:block;padding:12px 0}.field{display:block;margin:0 0 16px}.field span{display:block;margin-bottom:6px;color:var(--primary-text-color);font-size:14px}.field small{display:block;margin-top:4px;color:var(--secondary-text-color)}input{box-sizing:border-box;width:100%;padding:10px;border:1px solid var(--divider-color);border-radius:6px;background:var(--card-background-color);color:var(--primary-text-color);font:inherit}.features{border:1px solid var(--divider-color);border-radius:8px;overflow:hidden}.features-toggle,.feature-action{font:inherit;color:var(--primary-text-color);cursor:pointer}.features-toggle{display:flex;width:100%;align-items:center;justify-content:space-between;padding:12px;border:0;background:var(--card-background-color);font-weight:600}.features-body{padding:4px 12px 12px;border-top:1px solid var(--divider-color)}.feature{display:flex;align-items:center;justify-content:space-between;padding:12px 0}.feature-action{border:0;background:transparent;color:var(--primary-color);padding:6px}.add-feature{border:1px solid var(--primary-color);background:transparent;color:var(--primary-color);border-radius:6px;padding:8px 10px}</style><label class="field"><span>Title</span><input data-key="title" value="${esc(this._config.title || this._config.name || "Alarm Clock")}"></label><label class="field"><span>Icon</span><input data-key="icon" value="${esc(this._config.icon || "mdi:alarm")}"><small>Use a Material Design Icon, for example: mdi:alarm</small></label><section class="features"><button class="features-toggle" id="features" aria-expanded="${this._featuresOpen ? "true" : "false"}"><span>Features</span><span>${this._featuresOpen ? "⌃" : "⌄"}</span></button>${this._featuresOpen ? `<div class="features-body">${hasAlarmTimes ? `<div class="feature"><span>Alarm times</span><button class="feature-action" id="remove-times">Remove</button></div>` : `<button class="add-feature" id="add-times">+ Add alarm times</button>`}</div>` : ""}</section>`;
+    const hasAlarmTimes = this._config.show_alarm_times !== false, hasOverride = this._config.show_override !== false;
+    const features = [
+      hasAlarmTimes ? `<div class="feature"><span>Alarm times</span><button class="feature-action" data-feature="alarm-times">Remove</button></div>` : "",
+      hasOverride ? `<div class="feature"><span>Override time</span><button class="feature-action" data-feature="override">Remove</button></div>` : "",
+      !hasAlarmTimes ? `<button class="add-feature" data-feature="alarm-times">+ Add alarm times</button>` : "",
+      !hasOverride ? `<button class="add-feature" data-feature="override">+ Add override time</button>` : "",
+    ].join("");
+    this.shadowRoot.innerHTML = `<style>:host{display:block;padding:12px 0}.field{display:block;margin:0 0 16px}.field span{display:block;margin-bottom:6px;color:var(--primary-text-color);font-size:14px}.field small{display:block;margin-top:4px;color:var(--secondary-text-color)}input{box-sizing:border-box;width:100%;padding:10px;border:1px solid var(--divider-color);border-radius:6px;background:var(--card-background-color);color:var(--primary-text-color);font:inherit}.features{border:1px solid var(--divider-color);border-radius:8px;overflow:hidden}.features-toggle,.feature-action{font:inherit;color:var(--primary-text-color);cursor:pointer}.features-toggle{display:flex;width:100%;align-items:center;justify-content:space-between;padding:12px;border:0;background:var(--card-background-color);font-weight:600}.features-body{padding:4px 12px 12px;border-top:1px solid var(--divider-color)}.feature{display:flex;align-items:center;justify-content:space-between;padding:12px 0}.feature-action{border:0;background:transparent;color:var(--primary-color);padding:6px}.add-feature{border:1px solid var(--primary-color);background:transparent;color:var(--primary-color);border-radius:6px;padding:8px 10px;margin:4px 4px 4px 0}</style><label class="field"><span>Title</span><input data-key="title" value="${esc(this._config.title || this._config.name || "Alarm Clock")}"></label><label class="field"><span>Icon</span><input data-key="icon" value="${esc(this._config.icon || "mdi:alarm")}"><small>Use a Material Design Icon, for example: mdi:alarm</small></label><section class="features"><button class="features-toggle" id="features" aria-expanded="${this._featuresOpen ? "true" : "false"}"><span>Features</span><span>${this._featuresOpen ? "⌃" : "⌄"}</span></button>${this._featuresOpen ? `<div class="features-body">${features}</div>` : ""}</section>`;
     this.shadowRoot.querySelectorAll("[data-key]").forEach((input) => input.onchange = () => {
       const key = input.dataset.key, value = input.value.trim(), config = { ...this._config };
       if (value) config[key] = value; else delete config[key];
@@ -69,15 +75,15 @@ class AlarmClockCardConfigEditor extends HTMLElement {
       this.dispatchEvent(new CustomEvent("config-changed", { detail: { config }, bubbles: true, composed: true }));
     });
     this.shadowRoot.querySelector("#features").onclick = () => { this._featuresOpen = !this._featuresOpen; this.render(); };
-    const setAlarmTimes = (shown) => {
+    const setFeature = (feature, shown) => {
       const config = { ...this._config };
-      if (shown) delete config.show_alarm_times; else config.show_alarm_times = false;
+      const key = feature === "alarm-times" ? "show_alarm_times" : "show_override";
+      if (shown) delete config[key]; else config[key] = false;
       this._config = config;
       this.dispatchEvent(new CustomEvent("config-changed", { detail: { config }, bubbles: true, composed: true }));
       this.render();
     };
-    this.shadowRoot.querySelector("#add-times")?.addEventListener("click", () => setAlarmTimes(true));
-    this.shadowRoot.querySelector("#remove-times")?.addEventListener("click", () => setAlarmTimes(false));
+    this.shadowRoot.querySelectorAll("[data-feature]").forEach((button) => button.addEventListener("click", () => setFeature(button.dataset.feature, button.classList.contains("add-feature"))));
   }
 }
 

@@ -39,7 +39,6 @@ Example summary card:
 ```yaml
 type: custom:alarm-clock-card
 entity: switch.tim_alarm_clock
-navigation_path: /kitchen-control/alarm
 ```
 
 Example editor card on that view:
