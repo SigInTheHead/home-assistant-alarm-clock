@@ -23,7 +23,7 @@ class AlarmClockBase extends HTMLElement {
   find(key) { return this.entities().find((item) => item.key === key); }
   value(key) { return this.find(key)?.state.state ?? this._hass?.states?.[this.config?.entity]?.attributes?.[key]; }
   async set(key, domain, service, data) { const item = this.find(key); if (item) await this._hass.callService(domain, service, { entity_id: item.entity_id, ...data }); }
-  styles() { return `<style>:host{display:block}ha-card{padding:16px}h2{display:flex;align-items:center;gap:8px;margin:0}.heading{display:flex;flex-direction:column;gap:2px}.heading .sub{font-weight:normal}h2 ha-icon{--mdc-icon-size:28px}h2 ha-icon.enabled{color:var(--primary-color)!important}h2 ha-icon.disabled{color:var(--disabled-text-color,#9e9e9e)!important}.summary{padding:12px}.summary h2{font-size:16px;line-height:1.2}.summary h2 ha-icon{--mdc-icon-size:24px}.summary .sub{font-size:12px}.sub,label{color:var(--secondary-text-color);font-size:13px}.row{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px 0;border-top:1px solid var(--divider-color)}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(125px,1fr));gap:8px;margin:12px 0}.box{background:var(--secondary-background-color);border-radius:8px;padding:9px}input,select,button{font:inherit;padding:6px;border-radius:6px;background:var(--secondary-background-color);color:var(--primary-text-color);border:1px solid var(--divider-color)}.time-controls{display:grid;grid-template-columns:1fr 14px 1fr;justify-items:center;align-items:center;margin-top:6px}.time-controls button{width:100%;padding:2px;border:0;background:transparent;font-size:18px;line-height:1;cursor:pointer}.time-value{font-size:20px;font-weight:600;padding:5px 0}.time-separator{font-size:18px}.hidden{display:none}</style>`; }
+  styles() { return `<style>:host{display:block}ha-card{padding:16px}h2{display:flex;align-items:center;gap:8px;margin:0}.heading{display:flex;flex-direction:column;gap:2px}.heading .sub{font-weight:normal}h2 ha-icon{--mdc-icon-size:28px}h2 ha-icon.enabled{color:var(--primary-color)!important}h2 ha-icon.disabled{color:var(--disabled-text-color,#9e9e9e)!important}.summary{padding:12px}.summary h2{font-size:16px;line-height:1.2}.summary h2 ha-icon{--mdc-icon-size:24px}.summary .sub{font-size:12px}.sub,label{color:var(--secondary-text-color);font-size:13px}.row{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px 0;border-top:1px solid var(--divider-color)}.override{border-top:0}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(125px,1fr));gap:8px;margin:12px 0}.box{background:var(--secondary-background-color);border-radius:8px;padding:9px}input,select,button{font:inherit;padding:6px;border-radius:6px;background:var(--secondary-background-color);color:var(--primary-text-color);border:1px solid var(--divider-color)}.time-controls{display:grid;grid-template-columns:1fr 14px 1fr;justify-items:center;align-items:center;margin-top:6px}.time-controls button{width:100%;padding:2px;border:0;background:transparent;font-size:18px;line-height:1;cursor:pointer}.time-value{font-size:20px;font-weight:600;padding:5px 0}.time-separator{font-size:18px}.hidden{display:none}</style>`; }
 }
 
 class AlarmClockCard extends AlarmClockBase {
@@ -48,9 +48,12 @@ class AlarmClockCard extends AlarmClockBase {
       if (day === tomorrow.toDateString()) return `Next: tomorrow at ${at}`;
       return `Next: ${date.toLocaleDateString([], { weekday: "long", day: "numeric", month: "short" })} at ${at}`;
     };
-    const alarmTimes = this.config.show_alarm_times !== false ? `<div class="grid">${schedule.map(([label,key]) => `<div class="box"><label>${label}</label><br><b>${esc((this.value(key) || "--:--").slice(0,5))}</b></div>`).join("")}</div>` : "";
-    const override = this.config.show_override !== false ? `<div class="row"><span>Override ${esc((this.value("override_time") || "--:--").slice(0,5))}</span></div>` : "";
-    this.shadowRoot.innerHTML = `${this.styles()}<ha-card class="summary"><h2><ha-icon class="${enabled ? "enabled" : "disabled"}" icon="${esc(this.config.icon || "mdi:alarm")}"></ha-icon><span class="heading"><span>${esc(this.config.title || this.config.name || "Alarm Clock")}</span><span class="sub">${esc(friendlyNext())}</span></span></h2>${alarmTimes}${override}</ha-card>`;
+    const features = {
+      alarm_times: this.config.show_alarm_times !== false ? `<div class="grid">${schedule.map(([label,key]) => `<div class="box"><label>${label}</label><br><b>${esc((this.value(key) || "--:--").slice(0,5))}</b></div>`).join("")}</div>` : "",
+      override: this.config.show_override !== false ? `<div class="row override"><span>Override ${esc((this.value("override_time") || "--:--").slice(0,5))}</span></div>` : "",
+    };
+    const featureOrder = [...new Set([...(this.config.feature_order || []), "alarm_times", "override"])].filter((key) => key in features);
+    this.shadowRoot.innerHTML = `${this.styles()}<ha-card class="summary"><h2><ha-icon class="${enabled ? "enabled" : "disabled"}" icon="${esc(this.config.icon || "mdi:alarm")}"></ha-icon><span class="heading"><span>${esc(this.config.title || this.config.name || "Alarm Clock")}</span><span class="sub">${esc(friendlyNext())}</span></span></h2>${featureOrder.map((key) => features[key]).join("")}</ha-card>`;
   }
 }
 
@@ -61,13 +64,14 @@ class AlarmClockCardConfigEditor extends HTMLElement {
   render() {
     if (!this.shadowRoot || !this._config) return;
     const hasAlarmTimes = this._config.show_alarm_times !== false, hasOverride = this._config.show_override !== false;
+    const featureOrder = [...new Set([...(this._config.feature_order || []), "alarm_times", "override"])].filter((key) => ["alarm_times", "override"].includes(key));
+    const featureLabels = { alarm_times: "Alarm times", override: "Override time" };
     const features = [
-      hasAlarmTimes ? `<div class="feature"><span>Alarm times</span><button class="feature-action" data-feature="alarm-times">Remove</button></div>` : "",
-      hasOverride ? `<div class="feature"><span>Override time</span><button class="feature-action" data-feature="override">Remove</button></div>` : "",
+      ...featureOrder.filter((key) => key === "alarm_times" ? hasAlarmTimes : hasOverride).map((key) => `<div class="feature" draggable="true" data-feature="${key}"><span class="drag-handle" title="Drag to reorder">⠿</span><span>${featureLabels[key]}</span><button class="feature-action" data-feature="${key}">Remove</button></div>`),
       !hasAlarmTimes ? `<button class="add-feature" data-feature="alarm-times">+ Add alarm times</button>` : "",
       !hasOverride ? `<button class="add-feature" data-feature="override">+ Add override time</button>` : "",
     ].join("");
-    this.shadowRoot.innerHTML = `<style>:host{display:block;padding:12px 0}.field{display:block;margin:0 0 16px}.field span{display:block;margin-bottom:6px;color:var(--primary-text-color);font-size:14px}.field small{display:block;margin-top:4px;color:var(--secondary-text-color)}input{box-sizing:border-box;width:100%;padding:10px;border:1px solid var(--divider-color);border-radius:6px;background:var(--card-background-color);color:var(--primary-text-color);font:inherit}ha-entity-picker,ha-icon-picker{display:block;width:100%}.features{border:1px solid var(--divider-color);border-radius:8px;overflow:hidden}.features-toggle,.feature-action{font:inherit;color:var(--primary-text-color);cursor:pointer}.features-toggle{display:flex;width:100%;align-items:center;justify-content:space-between;padding:12px;border:0;background:var(--card-background-color);font-weight:600}.features-body{padding:4px 12px 12px;border-top:1px solid var(--divider-color)}.feature{display:flex;align-items:center;justify-content:space-between;padding:12px 0}.feature-action{border:0;background:transparent;color:var(--primary-color);padding:6px}.add-feature{border:1px solid var(--primary-color);background:transparent;color:var(--primary-color);border-radius:6px;padding:8px 10px;margin:4px 4px 4px 0}</style><label class="field"><span>Entity</span><ha-entity-picker id="entity"></ha-entity-picker><small>Select the root Alarm Clock switch.</small></label><label class="field"><span>Title</span><input data-key="title" value="${esc(this._config.title || this._config.name || "Alarm Clock")}"></label><label class="field"><span>Icon</span><ha-icon-picker id="icon"></ha-icon-picker></label><section class="features"><button class="features-toggle" id="features" aria-expanded="${this._featuresOpen ? "true" : "false"}"><span>Features</span><span>${this._featuresOpen ? "⌃" : "⌄"}</span></button>${this._featuresOpen ? `<div class="features-body">${features}</div>` : ""}</section>`;
+    this.shadowRoot.innerHTML = `<style>:host{display:block;padding:12px 0}.field{display:block;margin:0 0 16px}.field span{display:block;margin-bottom:6px;color:var(--primary-text-color);font-size:14px}.field small{display:block;margin-top:4px;color:var(--secondary-text-color)}input{box-sizing:border-box;width:100%;padding:10px;border:1px solid var(--divider-color);border-radius:6px;background:var(--card-background-color);color:var(--primary-text-color);font:inherit}ha-entity-picker,ha-icon-picker{display:block;width:100%}.features{border:1px solid var(--divider-color);border-radius:8px;overflow:hidden}.features-toggle,.feature-action{font:inherit;color:var(--primary-text-color);cursor:pointer}.features-toggle{display:flex;width:100%;align-items:center;justify-content:space-between;padding:12px;border:0;background:var(--card-background-color);font-weight:600}.features-body{padding:4px 12px 12px;border-top:1px solid var(--divider-color)}.feature{display:flex;align-items:center;gap:8px;padding:12px 0;cursor:grab}.feature-action{border:0;background:transparent;color:var(--primary-color);padding:6px;margin-left:auto}.drag-handle{color:var(--secondary-text-color);font-size:18px}.add-feature{border:1px solid var(--primary-color);background:transparent;color:var(--primary-color);border-radius:6px;padding:8px 10px;margin:4px 4px 4px 0}</style><label class="field"><span>Entity</span><ha-entity-picker id="entity"></ha-entity-picker><small>Select the root Alarm Clock switch.</small></label><label class="field"><span>Title</span><input data-key="title" value="${esc(this._config.title || this._config.name || "Alarm Clock")}"></label><label class="field"><span>Icon</span><ha-icon-picker id="icon"></ha-icon-picker></label><section class="features"><button class="features-toggle" id="features" aria-expanded="${this._featuresOpen ? "true" : "false"}"><span>Features</span><span>${this._featuresOpen ? "⌃" : "⌄"}</span></button>${this._featuresOpen ? `<div class="features-body">${features}</div>` : ""}</section>`;
     const entityPicker = this.shadowRoot.querySelector("#entity");
     entityPicker.hass = this._hass;
     entityPicker.value = this._config.entity || "";
@@ -100,7 +104,22 @@ class AlarmClockCardConfigEditor extends HTMLElement {
       this.dispatchEvent(new CustomEvent("config-changed", { detail: { config }, bubbles: true, composed: true }));
       this.render();
     };
-    this.shadowRoot.querySelectorAll("[data-feature]").forEach((button) => button.addEventListener("click", () => setFeature(button.dataset.feature, button.classList.contains("add-feature"))));
+    this.shadowRoot.querySelectorAll("button[data-feature]").forEach((button) => button.addEventListener("click", () => setFeature(button.dataset.feature, button.classList.contains("add-feature"))));
+    this.shadowRoot.querySelectorAll(".feature[draggable]").forEach((feature) => {
+      feature.addEventListener("dragstart", (event) => { event.dataTransfer.effectAllowed = "move"; event.dataTransfer.setData("text/plain", feature.dataset.feature); });
+      feature.addEventListener("dragover", (event) => event.preventDefault());
+      feature.addEventListener("drop", (event) => {
+        event.preventDefault();
+        const dragged = event.dataTransfer.getData("text/plain"), target = feature.dataset.feature;
+        if (!dragged || dragged === target) return;
+        const order = featureOrder.filter((key) => key !== dragged);
+        order.splice(order.indexOf(target), 0, dragged);
+        const config = { ...this._config, feature_order: order };
+        this._config = config;
+        this.dispatchEvent(new CustomEvent("config-changed", { detail: { config }, bubbles: true, composed: true }));
+        this.render();
+      });
+    });
   }
 }
 
