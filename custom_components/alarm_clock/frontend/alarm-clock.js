@@ -23,16 +23,48 @@ class AlarmClockBase extends HTMLElement {
   find(key) { return this.entities().find((item) => item.key === key); }
   value(key) { return this.find(key)?.state.state ?? this._hass?.states?.[this.config?.entity]?.attributes?.[key]; }
   async set(key, domain, service, data) { const item = this.find(key); if (item) await this._hass.callService(domain, service, { entity_id: item.entity_id, ...data }); }
-  styles() { return `<style>:host{display:block}ha-card{padding:16px}.sub,label{color:var(--secondary-text-color);font-size:13px}.row{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px 0;border-top:1px solid var(--divider-color)}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(125px,1fr));gap:8px;margin:12px 0}.box{background:var(--secondary-background-color);border-radius:8px;padding:9px}input,select,button{font:inherit;padding:6px;border-radius:6px;background:var(--secondary-background-color);color:var(--primary-text-color);border:1px solid var(--divider-color)}.time-controls{display:grid;grid-template-columns:1fr 14px 1fr;justify-items:center;align-items:center;margin-top:6px}.time-controls button{width:100%;padding:2px;border:0;background:transparent;font-size:18px;line-height:1;cursor:pointer}.time-value{font-size:20px;font-weight:600;padding:5px 0}.time-separator{font-size:18px}.hidden{display:none}</style>`; }
+  styles() { return `<style>:host{display:block}ha-card{padding:16px}h2{display:flex;align-items:center;gap:8px;margin-top:0}h2 ha-icon{--mdc-icon-size:28px}.sub,label{color:var(--secondary-text-color);font-size:13px}.row{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px 0;border-top:1px solid var(--divider-color)}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(125px,1fr));gap:8px;margin:12px 0}.box{background:var(--secondary-background-color);border-radius:8px;padding:9px}input,select,button{font:inherit;padding:6px;border-radius:6px;background:var(--secondary-background-color);color:var(--primary-text-color);border:1px solid var(--divider-color)}.time-controls{display:grid;grid-template-columns:1fr 14px 1fr;justify-items:center;align-items:center;margin-top:6px}.time-controls button{width:100%;padding:2px;border:0;background:transparent;font-size:18px;line-height:1;cursor:pointer}.time-value{font-size:20px;font-weight:600;padding:5px 0}.time-separator{font-size:18px}.hidden{display:none}</style>`; }
 }
 
 class AlarmClockCard extends AlarmClockBase {
+  static getConfigElement() { return document.createElement("alarm-clock-card-config-editor"); }
+  static getStubConfig(hass) {
+    const entity = Object.keys(hass.states).find((id) => hass.states[id].attributes?.alarm_clock_entry_id);
+    return { entity, title: "Alarm Clock", icon: "mdi:alarm" };
+  }
   render() {
     if (!this.shadowRoot || !this._hass || !this.config) return;
     const schedule = [["Mon–Fri", "weekday_time"], ["Saturday", "saturday_time"], ["Sunday", "sunday_time"]];
     const next = this.value("next_alarm");
-    this.shadowRoot.innerHTML = `${this.styles()}<ha-card><h2>⏰ ${esc(this.config.name || "Alarm Clock")}</h2><div class="sub">${this.value("enabled") === "on" ? "Enabled" : "Disabled"}${next && next !== "unknown" ? ` · Next: ${new Date(next).toLocaleString()}` : ""}</div><div class="grid">${schedule.map(([label,key]) => `<div class="box"><label>${label}</label><br><b>${esc((this.value(key) || "--:--").slice(0,5))}</b></div>`).join("")}</div><div class="row"><span>Override ${esc((this.value("override_time") || "--:--").slice(0,5))}</span><button id="open">${this.config.navigation_path ? "Open alarm" : "Details"}</button></div></ha-card>`;
+    const friendlyNext = () => {
+      if (this.value("enabled") !== "on") return "Next: alarm is off";
+      if (!next || next === "unknown") return "Next: not scheduled";
+      const date = new Date(next), now = new Date();
+      const at = date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+      const day = date.toDateString();
+      if (day === now.toDateString()) return `Next: today at ${at}`;
+      const tomorrow = new Date(now); tomorrow.setDate(now.getDate() + 1);
+      if (day === tomorrow.toDateString()) return `Next: tomorrow at ${at}`;
+      return `Next: ${date.toLocaleDateString([], { weekday: "long", day: "numeric", month: "short" })} at ${at}`;
+    };
+    this.shadowRoot.innerHTML = `${this.styles()}<ha-card><h2><ha-icon icon="${esc(this.config.icon || "mdi:alarm")}"></ha-icon>${esc(this.config.title || this.config.name || "Alarm Clock")}</h2><div class="sub">${esc(friendlyNext())}</div><div class="grid">${schedule.map(([label,key]) => `<div class="box"><label>${label}</label><br><b>${esc((this.value(key) || "--:--").slice(0,5))}</b></div>`).join("")}</div><div class="row"><span>Override ${esc((this.value("override_time") || "--:--").slice(0,5))}</span><button id="open">${this.config.navigation_path ? "Open alarm" : "Details"}</button></div></ha-card>`;
     this.shadowRoot.querySelector("#open").onclick = () => { if (this.config.navigation_path) { history.pushState(null, "", this.config.navigation_path); window.dispatchEvent(new Event("location-changed")); } else this.dispatchEvent(new CustomEvent("hass-more-info", { bubbles:true, composed:true, detail:{entityId:this.config.entity} })); };
+  }
+}
+
+class AlarmClockCardConfigEditor extends HTMLElement {
+  setConfig(config) { this._config = { ...config }; this.render(); }
+  set hass(hass) { this._hass = hass; }
+  connectedCallback() { this.attachShadow({ mode: "open" }); this.render(); }
+  render() {
+    if (!this.shadowRoot || !this._config) return;
+    this.shadowRoot.innerHTML = `<style>:host{display:block;padding:12px 0}.field{display:block;margin:0 0 16px}.field span{display:block;margin-bottom:6px;color:var(--primary-text-color);font-size:14px}.field small{display:block;margin-top:4px;color:var(--secondary-text-color)}input{box-sizing:border-box;width:100%;padding:10px;border:1px solid var(--divider-color);border-radius:6px;background:var(--card-background-color);color:var(--primary-text-color);font:inherit}</style><label class="field"><span>Title</span><input data-key="title" value="${esc(this._config.title || this._config.name || "Alarm Clock")}"></label><label class="field"><span>Icon</span><input data-key="icon" value="${esc(this._config.icon || "mdi:alarm")}"><small>Use a Material Design Icon, for example: mdi:alarm</small></label>`;
+    this.shadowRoot.querySelectorAll("[data-key]").forEach((input) => input.onchange = () => {
+      const key = input.dataset.key, value = input.value.trim(), config = { ...this._config };
+      if (value) config[key] = value; else delete config[key];
+      this._config = config;
+      this.dispatchEvent(new CustomEvent("config-changed", { detail: { config }, bubbles: true, composed: true }));
+    });
   }
 }
 
@@ -67,5 +99,6 @@ class AlarmClockEditorCard extends AlarmClockBase {
 
 customElements.define("alarm-clock-card", AlarmClockCard);
 customElements.define("alarm-clock-editor-card", AlarmClockEditorCard);
+customElements.define("alarm-clock-card-config-editor", AlarmClockCardConfigEditor);
 window.customCards = window.customCards || [];
 window.customCards.push({ type:"alarm-clock-card", name:"Alarm Clock", description:"Alarm Clock summary" }, { type:"alarm-clock-editor-card", name:"Alarm Clock Editor", description:"Alarm Clock controls" });
