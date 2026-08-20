@@ -17,7 +17,7 @@ Choose the mode in **Settings → Devices & services → Alarm Clock → Configu
 
 ## Optional Lovelace cards
 
-The integration works without custom frontend resources. To use the optional summary and editor cards—or browser-local media previews in **Configure**—register the JavaScript module after installing the integration and restarting Home Assistant:
+The integration works without custom frontend resources. To use the optional summary and editor cards, register the JavaScript module after installing the integration and restarting Home Assistant:
 
 1. Go to **Settings → Dashboards**.
 2. Open the three-dot menu in the top-right and select **Resources**.
@@ -31,8 +31,6 @@ The integration works without custom frontend resources. To use the optional sum
 5. Save, then hard-refresh the browser.
 
 The module is served by the installed Alarm Clock integration; do not copy it into `/config/www`.
-
-Preview plays compatible media in the browser/tablet currently showing Home Assistant. It never sends playback to the alarm's configured speaker. Some external radio streams may refuse browser playback because of their own CORS or format restrictions.
 
 Example summary card:
 
