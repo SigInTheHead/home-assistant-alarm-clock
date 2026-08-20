@@ -105,23 +105,32 @@ class MorningAlarmOptionsFlow(config_entries.OptionsFlow):
             )
             if duplicate:
                 return self.async_show_form(step_id="init", data_schema=self._schema(options), errors={ALARM_NAME: "duplicate_name"})
-            new_options = {
-                **options,
-                **{
-                    key: user_input.get(key)
-                    for key in (
-                        CONF_PRIMARY_PRE_MEDIA,
-                        CONF_PRIMARY_MAIN_MEDIA,
-                        CONF_FOLLOWUP_PRE_MEDIA,
-                        CONF_FOLLOWUP_MAIN_MEDIA,
-                    )
-                },
+            media_keys = (
+                CONF_PRIMARY_PRE_MEDIA,
+                CONF_PRIMARY_MAIN_MEDIA,
+                CONF_FOLLOWUP_PRE_MEDIA,
+                CONF_FOLLOWUP_MAIN_MEDIA,
+            )
+            # Optional selector fields are absent when left untouched. Keep
+            # their existing values rather than interpreting an absent picker
+            # as a request to erase it when saving another setting.
+            updated_media = {
+                key: media
+                for key in media_keys
+                if isinstance(media := user_input.get(key), Mapping)
+                and media.get("media_content_id")
             }
+            new_options = {**options, **updated_media}
             new_options = _with_schedule_mode(
                 new_options, user_input[CONF_SCHEDULE_MODE]
             )
-            self.hass.config_entries.async_update_entry(self.config_entry, title=data[ALARM_NAME], data=data, options=new_options)
-            return self.async_create_entry(title="", data={})
+            # OptionsFlow persists the ``data`` returned here as the entry's
+            # options. Updating it manually and then returning an empty dict
+            # causes Home Assistant to immediately overwrite those values.
+            self.hass.config_entries.async_update_entry(
+                self.config_entry, title=data[ALARM_NAME], data=data
+            )
+            return self.async_create_entry(title="", data=new_options)
         return self.async_show_form(step_id="init", data_schema=self._schema(options))
 
     def _schema(self, options: Mapping[str, Any]) -> vol.Schema:
