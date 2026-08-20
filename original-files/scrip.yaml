@@ -1,0 +1,33 @@
+alias: Start Morning Alarm
+sequence:
+  - action: media_player.volume_set
+    target:
+      entity_id: media_player.bedroom_speaker
+    data:
+      volume_level: 0.3
+  - action: timer.start
+    target:
+      entity_id: timer.alarm_follow_up
+  - action: timer.start
+    target:
+      entity_id: timer.alarm_off_timer
+  - action: media_player.play_media
+    target:
+      entity_id: media_player.bedroom_speaker
+    data:
+      media:
+        media_content_id: media-source://radio_browser/16406133-159b-4abb-9e18-0824b053403e
+        media_content_type: audio/aac
+        metadata:
+          title: BBC Radio 2
+          thumbnail: https://cdn-profiles.tunein.com/s266113/images/logod.png
+          media_class: music
+          children_media_class: null
+          navigateIds:
+            - {}
+            - media_content_type: app
+              media_content_id: media-source://radio_browser
+            - media_content_type: music
+              media_content_id: media-source://radio_browser/country/GB
+          browse_entity_id: media_player.bedroom_speaker
+mode: restart

@@ -1,0 +1,85 @@
+alias: Morning Wake Up Alarm
+description: Configurable wake-up alarm with one-shot override and follow-up alarm
+triggers:
+  - trigger: time
+    at: input_datetime.weekday_alarm_time
+    id: weekday
+  - trigger: time
+    at: input_datetime.saturday_alarm_time
+    id: saturday
+  - trigger: time
+    at: input_datetime.sunday_alarm_time
+    id: sunday
+  - trigger: time
+    at: input_datetime.override_alarm_time
+    id: override
+  - trigger: event
+    event_type: timer.finished
+    event_data:
+      entity_id: timer.alarm_follow_up
+    id: follow_up
+  - trigger: event
+    event_type: timer.finished
+    event_data:
+      entity_id: timer.alarm_off_timer
+    id: alarm_off
+conditions: []
+actions:
+  - choose:
+      - conditions:
+          - condition: trigger
+            id: alarm_off
+        sequence:
+          - action: media_player.media_stop
+            target:
+              entity_id: media_player.bedroom_speaker
+      - conditions:
+          - condition: trigger
+            id: follow_up
+          - condition: state
+            entity_id: media_player.bedroom_speaker
+            state: playing
+        sequence:
+          - action: media_player.volume_set
+            target:
+              entity_id: media_player.bedroom_speaker
+            data:
+              volume_level: 0.4
+      - conditions:
+          - condition: trigger
+            id: override
+          - condition: state
+            entity_id: input_boolean.alarm_active
+            state: 'on'
+          - condition: state
+            entity_id: input_boolean.alarm_override
+            state: 'on'
+        sequence:
+          - action: script.start_morning_alarm
+          - action: input_boolean.turn_off
+            target:
+              entity_id: input_boolean.alarm_override
+      - conditions:
+          - condition: trigger
+            id:
+              - weekday
+              - saturday
+              - sunday
+          - condition: state
+            entity_id: input_boolean.alarm_active
+            state: 'on'
+          - condition: state
+            entity_id: input_boolean.alarm_override
+            state: 'off'
+          - condition: template
+            value_template: |
+              {{
+                (trigger.id == 'weekday' and now().weekday() in [0, 1, 2, 3, 4])
+                or
+                (trigger.id == 'saturday' and now().weekday() == 5)
+                or
+                (trigger.id == 'sunday' and now().weekday() == 6)
+              }}
+        sequence:
+          - action: script.start_morning_alarm
+mode: restart

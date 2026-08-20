@@ -1,0 +1,24 @@
+trigger:
+  name: Trigger alarm
+  description: Start the full primary alarm sequence for selected alarm entries.
+  fields:
+    entry_id:
+      required: true
+      selector:
+        text:
+trigger_follow_up:
+  name: Trigger follow-up
+  description: Start the selected entries' follow-up sequence now.
+  fields:
+    entry_id:
+      required: true
+      selector:
+        text:
+stop:
+  name: Stop alarm
+  description: Stop the selected entries' active alarm sequence.
+  fields:
+    entry_id:
+      required: true
+      selector:
+        text:
