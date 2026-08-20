@@ -15,12 +15,15 @@ from homeassistant.helpers.selector import (
     NumberSelector,
     NumberSelectorConfig,
     NumberSelectorMode,
+    SelectSelector,
+    SelectSelectorConfig,
 )
 
 from .const import (
     CONF_DAY_ENABLED, CONF_DAY_TIMES, CONF_FOLLOWUP_MAIN_MEDIA, CONF_FOLLOWUP_PRE_MEDIA,
     CONF_MEDIA_PLAYER, CONF_NAME as ALARM_NAME, CONF_PRIMARY_MAIN_MEDIA, CONF_PRIMARY_PRE_MEDIA,
-    DAYS, DEFAULT_OPTIONS, DOMAIN,
+    CONF_SCHEDULE_MODE, DAYS, DEFAULT_OPTIONS, DOMAIN, SCHEDULE_COMPACT,
+    SCHEDULE_PER_DAY, WEEKDAY_DAYS,
 )
 
 def _media_default(value: Any) -> Any:
@@ -40,6 +43,34 @@ def _media_default(value: Any) -> Any:
 # alarm has one deliberate output target, configured above, so constrain each
 # picker to audio and let the coordinator always play it on that target.
 MEDIA_SELECTOR = MediaSelector(MediaSelectorConfig(accept=["audio/*"]))
+
+
+def _with_schedule_mode(options: dict[str, Any], mode: str) -> dict[str, Any]:
+    """Set the schedule mode, carrying its schedule values across safely."""
+    if mode == options[CONF_SCHEDULE_MODE]:
+        return options
+
+    updated = dict(options)
+    if mode == SCHEDULE_PER_DAY:
+        times = dict(updated[CONF_DAY_TIMES])
+        for day in WEEKDAY_DAYS:
+            times[day] = updated["weekday_time"]
+        times["saturday"] = updated["saturday_time"]
+        times["sunday"] = updated["sunday_time"]
+        updated[CONF_DAY_TIMES] = times
+        updated[CONF_DAY_ENABLED] = {day: True for day in DAYS}
+    else:
+        enabled_weekdays = [
+            updated[CONF_DAY_TIMES][day]
+            for day in WEEKDAY_DAYS
+            if updated[CONF_DAY_ENABLED].get(day, True)
+        ]
+        if enabled_weekdays:
+            updated["weekday_time"] = min(enabled_weekdays)
+        updated["saturday_time"] = updated[CONF_DAY_TIMES]["saturday"]
+        updated["sunday_time"] = updated[CONF_DAY_TIMES]["sunday"]
+    updated[CONF_SCHEDULE_MODE] = mode
+    return updated
 
 class MorningAlarmConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Create independent alarm config entries."""
@@ -78,7 +109,21 @@ class MorningAlarmOptionsFlow(config_entries.OptionsFlow):
             )
             if duplicate:
                 return self.async_show_form(step_id="init", data_schema=self._schema(options), errors={ALARM_NAME: "duplicate_name"})
-            new_options = {**options, **{key: user_input.get(key) for key in (CONF_PRIMARY_PRE_MEDIA, CONF_PRIMARY_MAIN_MEDIA, CONF_FOLLOWUP_PRE_MEDIA, CONF_FOLLOWUP_MAIN_MEDIA)}}
+            new_options = {
+                **options,
+                **{
+                    key: user_input.get(key)
+                    for key in (
+                        CONF_PRIMARY_PRE_MEDIA,
+                        CONF_PRIMARY_MAIN_MEDIA,
+                        CONF_FOLLOWUP_PRE_MEDIA,
+                        CONF_FOLLOWUP_MAIN_MEDIA,
+                    )
+                },
+            }
+            new_options = _with_schedule_mode(
+                new_options, user_input[CONF_SCHEDULE_MODE]
+            )
             self.hass.config_entries.async_update_entry(self.config_entry, title=data[ALARM_NAME], data=data, options=new_options)
             return self.async_create_entry(title="", data={})
         return self.async_show_form(step_id="init", data_schema=self._schema(options))
@@ -87,6 +132,12 @@ class MorningAlarmOptionsFlow(config_entries.OptionsFlow):
         return vol.Schema({
             vol.Required(ALARM_NAME, default=self.config_entry.data[ALARM_NAME]): str,
             vol.Required(CONF_MEDIA_PLAYER, default=self.config_entry.data[CONF_MEDIA_PLAYER]): EntitySelector(EntitySelectorConfig(domain="media_player")),
+            vol.Required(CONF_SCHEDULE_MODE, default=options[CONF_SCHEDULE_MODE]): SelectSelector(
+                SelectSelectorConfig(options=[
+                    {"value": SCHEDULE_COMPACT, "label": "Weekday / Saturday / Sunday"},
+                    {"value": SCHEDULE_PER_DAY, "label": "Individual days"},
+                ])
+            ),
             vol.Optional(CONF_PRIMARY_PRE_MEDIA, default=_media_default(options[CONF_PRIMARY_PRE_MEDIA])): MEDIA_SELECTOR,
             vol.Optional(CONF_PRIMARY_MAIN_MEDIA, default=_media_default(options[CONF_PRIMARY_MAIN_MEDIA])): MEDIA_SELECTOR,
             vol.Optional(CONF_FOLLOWUP_PRE_MEDIA, default=_media_default(options[CONF_FOLLOWUP_PRE_MEDIA])): MEDIA_SELECTOR,

@@ -5,7 +5,7 @@ from datetime import time
 from homeassistant.const import Platform
 
 DOMAIN = "alarm_clock"
-PLATFORMS = [Platform.SWITCH, Platform.TIME, Platform.NUMBER, Platform.SELECT, Platform.SENSOR]
+PLATFORMS = [Platform.SWITCH, Platform.TIME, Platform.NUMBER, Platform.SENSOR]
 DATA_COORDINATOR = "coordinator"
 
 CONF_NAME = "name"
