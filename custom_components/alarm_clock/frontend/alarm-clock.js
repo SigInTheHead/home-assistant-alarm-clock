@@ -23,7 +23,7 @@ class AlarmClockBase extends HTMLElement {
   find(key) { return this.entities().find((item) => item.key === key); }
   value(key) { return this.find(key)?.state.state ?? this._hass?.states?.[this.config?.entity]?.attributes?.[key]; }
   async set(key, domain, service, data) { const item = this.find(key); if (item) await this._hass.callService(domain, service, { entity_id: item.entity_id, ...data }); }
-  styles() { return `<style>:host{display:block}ha-card{padding:16px}h2{display:flex;align-items:center;gap:8px;margin-top:0}h2 ha-icon{--mdc-icon-size:28px}h2 ha-icon.enabled{color:var(--state-switch-on-color,var(--state-icon-active-color,#ff9800))}h2 ha-icon.disabled{color:var(--state-switch-off-color,var(--state-icon-color))}.sub,label{color:var(--secondary-text-color);font-size:13px}.row{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px 0;border-top:1px solid var(--divider-color)}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(125px,1fr));gap:8px;margin:12px 0}.box{background:var(--secondary-background-color);border-radius:8px;padding:9px}input,select,button{font:inherit;padding:6px;border-radius:6px;background:var(--secondary-background-color);color:var(--primary-text-color);border:1px solid var(--divider-color)}.time-controls{display:grid;grid-template-columns:1fr 14px 1fr;justify-items:center;align-items:center;margin-top:6px}.time-controls button{width:100%;padding:2px;border:0;background:transparent;font-size:18px;line-height:1;cursor:pointer}.time-value{font-size:20px;font-weight:600;padding:5px 0}.time-separator{font-size:18px}.hidden{display:none}</style>`; }
+  styles() { return `<style>:host{display:block}ha-card{padding:16px}h2{display:flex;align-items:center;gap:8px;margin-top:0}h2 ha-icon{--mdc-icon-size:28px}h2 ha-icon.enabled{color:var(--success-color,#4caf50)!important}h2 ha-icon.disabled{color:var(--disabled-text-color,#9e9e9e)!important}.sub,label{color:var(--secondary-text-color);font-size:13px}.row{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px 0;border-top:1px solid var(--divider-color)}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(125px,1fr));gap:8px;margin:12px 0}.box{background:var(--secondary-background-color);border-radius:8px;padding:9px}input,select,button{font:inherit;padding:6px;border-radius:6px;background:var(--secondary-background-color);color:var(--primary-text-color);border:1px solid var(--divider-color)}.time-controls{display:grid;grid-template-columns:1fr 14px 1fr;justify-items:center;align-items:center;margin-top:6px}.time-controls button{width:100%;padding:2px;border:0;background:transparent;font-size:18px;line-height:1;cursor:pointer}.time-value{font-size:20px;font-weight:600;padding:5px 0}.time-separator{font-size:18px}.hidden{display:none}</style>`; }
 }
 
 class AlarmClockCard extends AlarmClockBase {
@@ -36,7 +36,7 @@ class AlarmClockCard extends AlarmClockBase {
     if (!this.shadowRoot || !this._hass || !this.config) return;
     const schedule = [["Mon–Fri", "weekday_time"], ["Saturday", "saturday_time"], ["Sunday", "sunday_time"]];
     const next = this.value("next_alarm");
-    const enabled = this.value("enabled") === "on";
+    const enabled = this._hass.states[this.config.entity]?.state === "on";
     const friendlyNext = () => {
       if (!enabled) return "Next: alarm is off";
       if (!next || next === "unknown") return "Next: not scheduled";
