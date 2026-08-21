@@ -21,7 +21,11 @@ class AlarmClockBase extends HTMLElement {
   }
   entities() { const entryId = this._hass?.states?.[this.config?.entity]?.attributes?.alarm_clock_entry_id; return Object.entries(this._hass?.states || {}).filter(([, state]) => state.attributes?.alarm_clock_entry_id === entryId).map(([entity_id, state]) => ({ entity_id, state, key: state.attributes.alarm_clock_key })); }
   find(key) { return this.entities().find((item) => item.key === key); }
-  value(key) { return this.find(key)?.state.state ?? this._hass?.states?.[this.config?.entity]?.attributes?.[key]; }
+  value(key) {
+    const rootValue = this._hass?.states?.[this.config?.entity]?.attributes?.[key];
+    if (key === "status" && rootValue !== undefined) return rootValue;
+    return this.find(key)?.state.state ?? rootValue;
+  }
   scheduleMode() {
     const configured = this.value("schedule_mode");
     if (configured) return configured;

@@ -35,6 +35,7 @@ class MorningAlarmCoordinator:
         self._stop_deadline: datetime | None = None
         self._late_followup = False
         self._current_stage: str | None = None
+        self._snoozing = False
         self.status = STATUS_DISABLED
         self.next_alarm: datetime | None = None
         self._listeners: list[Callable[[], None]] = []
@@ -258,6 +259,7 @@ class MorningAlarmCoordinator:
         await self._cancel_active_stages_keep_stop()
         if self._stop_cancel: self._stop_cancel()
         token = self._occurrence = uuid4().hex
+        self._snoozing = False
         self._snapshot = deepcopy(self.options)
         started = dt_util.now()
         self._schedule_stop(token, started + timedelta(minutes=self._snapshot[CONF_STOP_AFTER]))
@@ -352,9 +354,16 @@ class MorningAlarmCoordinator:
             await self.async_stop(manual=True)
             return
         token = self._occurrence
-        if self._stage_task:
-            self._stage_task.cancel()
+        self._snoozing = True
+        task = self._stage_task
+        if task:
+            task.cancel()
             self._stage_task = None
+            if task is not asyncio.current_task():
+                try:
+                    await task
+                except asyncio.CancelledError:
+                    pass
         if self._follow_cancel:
             self._follow_cancel()
             self._follow_cancel = None
@@ -386,6 +395,7 @@ class MorningAlarmCoordinator:
         if token != self._occurrence:
             return
         self._snooze_cancel = None
+        self._snoozing = False
         if self._stop_deadline and dt_util.now() >= self._stop_deadline:
             await self.async_stop(token=token)
             return
@@ -397,7 +407,7 @@ class MorningAlarmCoordinator:
             self._stage_task = self.hass.async_create_task(self._play_main_stage(token, True))
 
     async def _play_stage(self, token: str, follow_up: bool, late: bool = False) -> None:
-        if token != self._occurrence or not self._snapshot: return
+        if token != self._occurrence or not self._snapshot or self._snoozing: return
         opt, prefix = self._snapshot, "followup" if follow_up else "primary"
         pre_enabled, pre_media = opt[f"{prefix}_pre_enabled"], Media.from_value(opt[f"{prefix}_pre_media"])
         if pre_enabled and pre_media:
@@ -411,7 +421,7 @@ class MorningAlarmCoordinator:
 
     async def _play_main_stage(self, token: str, follow_up: bool) -> None:
         """Play the selected main media without replaying its pre-alarm."""
-        if token != self._occurrence or not self._snapshot:
+        if token != self._occurrence or not self._snapshot or self._snoozing:
             return
         opt = self._snapshot
         media = Media.from_value(opt[CONF_PRIMARY_MAIN_MEDIA] if not follow_up or opt[CONF_FOLLOWUP_REUSE_PRIMARY] else opt[CONF_FOLLOWUP_MAIN_MEDIA])
@@ -459,7 +469,7 @@ class MorningAlarmCoordinator:
             except Exception as err:
                 _LOGGER.debug("media_stop failed for %s: %s", self.entry.title, err)
         self.status, self._occurrence, self._stop_deadline, self._late_followup = STATUS_STOPPED, None, None, False
-        self._snapshot = None; self._current_stage = None; self._notify()
+        self._snapshot = None; self._current_stage = None; self._snoozing = False; self._notify()
         await self.async_reschedule()
 
     async def async_stop_runtime(self) -> None:
@@ -474,3 +484,4 @@ class MorningAlarmCoordinator:
         self._stop_deadline = None
         self._late_followup = False
         self._current_stage = None
+        self._snoozing = False
