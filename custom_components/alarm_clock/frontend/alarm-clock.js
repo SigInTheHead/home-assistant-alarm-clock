@@ -62,7 +62,11 @@ class AlarmClockCard extends AlarmClockBase {
       override: this.config.show_override !== false ? `<div class="row override"><span>Override ${esc((this.value("override_time") || "--:--").slice(0,5))}</span></div>` : "",
     };
     const featureOrder = [...new Set([...(this.config.feature_order || []), "alarm_times", "override"])].filter((key) => key in features);
-    this.shadowRoot.innerHTML = `${this.styles()}<ha-card class="summary"><h2><ha-icon class="${enabled ? "enabled" : "disabled"}" icon="${esc(this.config.icon || "mdi:alarm")}"></ha-icon><span class="heading"><span>${esc(this.config.title || this.config.name || "Alarm Clock")}</span><span class="sub">${esc(friendlyNext())}</span></span></h2>${featureOrder.map((key) => features[key]).join("")}</ha-card>`;
+    this.shadowRoot.innerHTML = `${this.styles()}<ha-card class="summary"><h2><ha-icon class="${enabled ? "enabled" : "disabled"}" icon="${esc(this.config.icon || "mdi:alarm")}"></ha-icon><span class="heading"><span>${esc(this.config.title || this.config.name || "Alarm Clock")}</span><span class="sub">${esc(friendlyNext())}</span></span></h2><div class="row"><span>Enabled</span><ha-switch data-toggle="enabled" aria-label="Enable alarm"></ha-switch></div><div class="row"><span>One-shot override</span><ha-switch data-toggle="override" aria-label="Enable one-shot override"></ha-switch></div>${featureOrder.map((key) => features[key]).join("")}</ha-card>`;
+    this.shadowRoot.querySelectorAll("ha-switch[data-toggle]").forEach((el) => {
+      el.checked = this.value(el.dataset.toggle) === "on";
+      el.onchange = () => this.set(el.dataset.toggle, "switch", el.checked ? "turn_on" : "turn_off", {});
+    });
   }
 }
 
