@@ -134,7 +134,13 @@ class AlarmClockCardConfigEditor extends HTMLElement {
 
 class AlarmClockEditorCardConfigEditor extends HTMLElement {
   setConfig(config) { this._config = { ...config }; this.render(); }
-  set hass(hass) { this._hass = hass; this.render(); }
+  set hass(hass) {
+    const firstHass = !this._hass;
+    this._hass = hass;
+    // Home Assistant updates hass frequently. Re-rendering here closes the
+    // entity picker while the user is searching, so only render on first load.
+    if (firstHass && this.isConnected) this.render();
+  }
   connectedCallback() { this.attachShadow({ mode: "open" }); this.render(); }
   render() {
     if (!this.shadowRoot || !this._config) return;
