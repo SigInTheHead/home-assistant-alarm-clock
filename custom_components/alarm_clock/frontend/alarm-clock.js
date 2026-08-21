@@ -159,30 +159,26 @@ class AlarmClockEditorCard extends AlarmClockBase {
   }
   render() {
     if (!this.shadowRoot || !this._hass || !this.config) return;
-    const advanced = this._advanced || false, mode = this.scheduleMode();
+    const mode = this.scheduleMode();
     const days = ["monday","tuesday","wednesday","thursday","friday"];
     const toggle = (label,key) => `<div class="row"><span>${label}</span><ha-switch data-toggle="${key}" aria-label="${label}"></ha-switch></div>`;
-    const num = (label,key) => `<div class="row"><label>${label}</label><input data-number="${key}" type="number" value="${esc(this.value(key))}"></div>`;
     const minuteStep = Number(this.value("minute_granularity")) || 5;
     const clock = (label,key,toggleKey) => {
       const [hour = "07", minute = "00"] = String(this.value(key) || "07:00").slice(0, 5).split(":");
       return `<div class="box"><div class="time-header"><label>${label}</label>${toggleKey ? `<ha-switch data-toggle="${toggleKey}" aria-label="Enable ${label}"></ha-switch>` : ""}</div><div class="time-controls"><button data-time-adjust="${key}" data-unit="hour" data-direction="1" aria-label="Increase hour">⌃</button><span></span><button data-time-adjust="${key}" data-unit="minute" data-direction="1" aria-label="Increase minutes">⌃</button><strong class="time-value">${esc(hour)}</strong><span class="time-separator">:</span><strong class="time-value">${esc(minute)}</strong><button data-time-adjust="${key}" data-unit="hour" data-direction="-1" aria-label="Decrease hour">⌄</button><span></span><button data-time-adjust="${key}" data-unit="minute" data-direction="-1" aria-label="Decrease minutes">⌄</button></div></div>`;
     };
     const schedule = mode === "compact" ? [["Weekday","weekday_time"],["Saturday","saturday_time"],["Sunday","sunday_time"]].map(([label,key]) => clock(label,key)).join("") : `${days.map((day) => clock(day[0].toUpperCase()+day.slice(1), `per_day_${day}_time`, `${day}_enabled`)).join("")}${clock("Saturday","saturday_time")}${clock("Sunday","sunday_time")}`;
-    this.shadowRoot.innerHTML = `${this.styles()}<ha-card><h2>⏰ ${esc(this.config.name || "Alarm Clock")}</h2><div class="sub">${esc(this.value("status") || "unknown")}</div>${toggle("Enabled","enabled")}${toggle("One-shot override","override")}<div class="grid">${schedule}${clock("Override time","override_time")}</div><button id="advanced">${advanced?"Hide":"Show"} advanced settings</button><section class="${advanced?"":"hidden"}">${toggle("Primary pre-alarm","primary_pre_enabled")}${num("Primary pre-alarm run for (seconds)","primary_pre_duration")}${num("Primary pre-alarm volume (%)","primary_pre_volume")}${num("Primary main volume (%)","primary_main_volume")}${toggle("Follow-up","followup_enabled")}${num("Follow-up delay (minutes)","followup_delay")}${toggle("Follow-up pre-alarm","followup_pre_enabled")}${num("Follow-up pre-alarm run for (seconds)","followup_pre_duration")}${num("Follow-up pre-alarm volume (%)","followup_pre_volume")}${toggle("Reuse primary main media","followup_reuse_primary")}${num("Follow-up main volume (%)","followup_main_volume")}${num("Stop after (minutes)","stop_after")}<div class="row"><span>Media, pre-alarm tones, and schedule mode are set in the integration Configure screen.</span><button id="configure">Configure</button></div></section></ha-card>`;
-    this.shadowRoot.querySelector("#advanced").onclick = () => { this._advanced = !advanced; this.render(); };
+    this.shadowRoot.innerHTML = `${this.styles()}<ha-card><h2>⏰ ${esc(this.config.name || "Alarm Clock")}</h2><div class="sub">${esc(this.value("status") || "unknown")}</div>${toggle("Enabled","enabled")}${toggle("One-shot override","override")}<div class="grid">${schedule}${clock("Override time","override_time")}</div><div class="row"><span>Alarm playback, media, and schedule settings are configured from the integration.</span><button id="configure">Configure</button></div></ha-card>`;
     this.shadowRoot.querySelectorAll("ha-switch[data-toggle]").forEach((el) => {
       el.checked = this.value(el.dataset.toggle) === "on";
       el.onchange = () => this.set(el.dataset.toggle,"switch",el.checked?"turn_on":"turn_off",{});
     });
-    this.shadowRoot.querySelectorAll("[data-number]").forEach((el)=>el.onchange=()=>this.set(el.dataset.number,"number","set_value",{value:Number(el.value)}));
     this.shadowRoot.querySelectorAll("[data-time-adjust]").forEach((el)=>el.onclick=()=>{
       const key = el.dataset.timeAdjust, [hour = "07", minute = "00"] = String(this.value(key) || "07:00").slice(0, 5).split(":");
       const delta = Number(el.dataset.direction) * (el.dataset.unit === "hour" ? 60 : minuteStep);
       const total = (Number(hour) * 60 + Number(minute) + delta + 1440) % 1440;
       this.set(key,"time","set_value",{time:`${String(Math.floor(total / 60)).padStart(2,"0")}:${String(total % 60).padStart(2,"0")}:00`});
     });
-    this.shadowRoot.querySelectorAll("[data-select]").forEach((el)=>el.onchange=()=>this.set(el.dataset.select,"select","select_option",{option:el.value}));
     this.shadowRoot.querySelector("#configure").onclick = () => { history.pushState(null,"","/config/integrations"); window.dispatchEvent(new Event("location-changed")); };
   }
 }

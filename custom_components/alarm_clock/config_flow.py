@@ -8,6 +8,8 @@ import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.const import CONF_NAME
 from homeassistant.helpers.selector import (
+    BooleanSelector,
+    BooleanSelectorConfig,
     EntitySelector,
     EntitySelectorConfig,
     MediaSelector,
@@ -21,10 +23,15 @@ from homeassistant.helpers.selector import (
 )
 
 from .const import (
-    CONF_DAY_ENABLED, CONF_DAY_TIMES, CONF_FOLLOWUP_MAIN_MEDIA, CONF_FOLLOWUP_PRE_MEDIA,
-    CONF_MEDIA_PLAYER, CONF_MINUTE_GRANULARITY, CONF_NAME as ALARM_NAME, CONF_PRIMARY_MAIN_MEDIA, CONF_PRIMARY_PRE_MEDIA,
+    CONF_DAY_ENABLED, CONF_DAY_TIMES, CONF_FOLLOWUP_DELAY, CONF_FOLLOWUP_ENABLED,
+    CONF_FOLLOWUP_MAIN_MEDIA, CONF_FOLLOWUP_MAIN_VOLUME, CONF_FOLLOWUP_PRE_ENABLED,
+    CONF_FOLLOWUP_PRE_MEDIA, CONF_FOLLOWUP_PRE_DURATION, CONF_FOLLOWUP_PRE_VOLUME,
+    CONF_FOLLOWUP_REUSE_PRIMARY, CONF_MEDIA_PLAYER, CONF_MINUTE_GRANULARITY,
+    CONF_NAME as ALARM_NAME, CONF_PRIMARY_MAIN_MEDIA, CONF_PRIMARY_MAIN_VOLUME,
+    CONF_PRIMARY_PRE_ENABLED, CONF_PRIMARY_PRE_MEDIA, CONF_PRIMARY_PRE_DURATION,
+    CONF_PRIMARY_PRE_VOLUME,
     CONF_SCHEDULE_MODE, DEFAULT_OPTIONS, DOMAIN, SCHEDULE_COMPACT,
-    PRE_ALARM_TONES, SCHEDULE_PER_DAY, WEEKDAY_DAYS,
+    PRE_ALARM_TONES, SCHEDULE_PER_DAY, WEEKDAY_DAYS, CONF_STOP_AFTER,
 )
 
 def _media_default(value: Any) -> Any:
@@ -98,7 +105,8 @@ class MorningAlarmConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         return MorningAlarmOptionsFlow()
 
 class MorningAlarmOptionsFlow(config_entries.OptionsFlow):
-    """Edit alarm settings and main media."""
+    """Edit alarm settings in conditional, uncluttered configuration steps."""
+
     async def async_step_init(self, user_input: dict[str, Any] | None = None):
         options = {**DEFAULT_OPTIONS, **self.config_entry.options}
         if user_input is not None:
@@ -112,34 +120,94 @@ class MorningAlarmOptionsFlow(config_entries.OptionsFlow):
             )
             if duplicate:
                 return self.async_show_form(step_id="init", data_schema=self._schema(options), errors={ALARM_NAME: "duplicate_name"})
-            media_keys = (CONF_PRIMARY_MAIN_MEDIA, CONF_FOLLOWUP_MAIN_MEDIA)
-            # Optional selector fields are absent when left untouched. Keep
-            # their existing values rather than interpreting an absent picker
-            # as a request to erase it when saving another setting.
-            updated_media = {
-                key: media
-                for key in media_keys
-                if isinstance(media := user_input.get(key), Mapping)
-                and media.get("media_content_id")
-            }
-            new_options = {
-                **options,
-                **updated_media,
-                CONF_PRIMARY_PRE_MEDIA: user_input[CONF_PRIMARY_PRE_MEDIA],
-                CONF_FOLLOWUP_PRE_MEDIA: user_input[CONF_FOLLOWUP_PRE_MEDIA],
+            self._data = data
+            self._options = _with_schedule_mode(options, user_input[CONF_SCHEDULE_MODE])
+            self._options.update({
                 CONF_MINUTE_GRANULARITY: user_input[CONF_MINUTE_GRANULARITY],
-            }
-            new_options = _with_schedule_mode(
-                new_options, user_input[CONF_SCHEDULE_MODE]
-            )
-            # OptionsFlow persists the ``data`` returned here as the entry's
-            # options. Updating it manually and then returning an empty dict
-            # causes Home Assistant to immediately overwrite those values.
-            self.hass.config_entries.async_update_entry(
-                self.config_entry, title=data[ALARM_NAME], data=data
-            )
-            return self.async_create_entry(title="", data=new_options)
+                CONF_PRIMARY_PRE_ENABLED: user_input[CONF_PRIMARY_PRE_ENABLED],
+                CONF_PRIMARY_MAIN_VOLUME: user_input[CONF_PRIMARY_MAIN_VOLUME],
+                CONF_FOLLOWUP_ENABLED: user_input[CONF_FOLLOWUP_ENABLED],
+                CONF_STOP_AFTER: user_input[CONF_STOP_AFTER],
+            })
+            self._store_media(user_input, CONF_PRIMARY_MAIN_MEDIA)
+            return await self.async_step_primary_pre() if self._options[CONF_PRIMARY_PRE_ENABLED] else await self.async_step_followup()
         return self.async_show_form(step_id="init", data_schema=self._schema(options))
+
+    def _store_media(self, user_input: Mapping[str, Any], key: str) -> None:
+        """Keep an optional media picker value when it is not changed."""
+        if isinstance(media := user_input.get(key), Mapping) and media.get("media_content_id"):
+            self._options[key] = media
+
+    async def async_step_primary_pre(self, user_input: dict[str, Any] | None = None):
+        if user_input is not None:
+            self._options.update({
+                CONF_PRIMARY_PRE_MEDIA: user_input[CONF_PRIMARY_PRE_MEDIA],
+                CONF_PRIMARY_PRE_DURATION: user_input[CONF_PRIMARY_PRE_DURATION],
+                CONF_PRIMARY_PRE_VOLUME: user_input[CONF_PRIMARY_PRE_VOLUME],
+            })
+            return await self.async_step_followup()
+        return self.async_show_form(step_id="primary_pre", data_schema=vol.Schema({
+            vol.Required(CONF_PRIMARY_PRE_MEDIA, default=_tone_default(self._options[CONF_PRIMARY_PRE_MEDIA])): self._tone_selector(),
+            vol.Required(CONF_PRIMARY_PRE_DURATION, default=self._options[CONF_PRIMARY_PRE_DURATION]): self._number(1, 300, "s"),
+            vol.Required(CONF_PRIMARY_PRE_VOLUME, default=self._options[CONF_PRIMARY_PRE_VOLUME]): self._number(0, 100, "%"),
+        }))
+
+    async def async_step_followup(self, user_input: dict[str, Any] | None = None):
+        if not self._options[CONF_FOLLOWUP_ENABLED]:
+            return await self._finish()
+        if user_input is not None:
+            self._options.update({
+                CONF_FOLLOWUP_DELAY: user_input[CONF_FOLLOWUP_DELAY],
+                CONF_FOLLOWUP_PRE_ENABLED: user_input[CONF_FOLLOWUP_PRE_ENABLED],
+                CONF_FOLLOWUP_REUSE_PRIMARY: user_input[CONF_FOLLOWUP_REUSE_PRIMARY],
+                CONF_FOLLOWUP_MAIN_VOLUME: user_input[CONF_FOLLOWUP_MAIN_VOLUME],
+            })
+            return await self.async_step_followup_pre() if self._options[CONF_FOLLOWUP_PRE_ENABLED] else await self.async_step_followup_main()
+        return self.async_show_form(step_id="followup", data_schema=vol.Schema({
+            vol.Required(CONF_FOLLOWUP_DELAY, default=self._options[CONF_FOLLOWUP_DELAY]): self._number(1, 180, "min"),
+            vol.Required(CONF_FOLLOWUP_PRE_ENABLED, default=self._options[CONF_FOLLOWUP_PRE_ENABLED]): BooleanSelector(BooleanSelectorConfig()),
+            vol.Required(CONF_FOLLOWUP_REUSE_PRIMARY, default=self._options[CONF_FOLLOWUP_REUSE_PRIMARY]): BooleanSelector(BooleanSelectorConfig()),
+            vol.Required(CONF_FOLLOWUP_MAIN_VOLUME, default=self._options[CONF_FOLLOWUP_MAIN_VOLUME]): self._number(0, 100, "%"),
+        }))
+
+    async def async_step_followup_pre(self, user_input: dict[str, Any] | None = None):
+        if user_input is not None:
+            self._options.update({
+                CONF_FOLLOWUP_PRE_MEDIA: user_input[CONF_FOLLOWUP_PRE_MEDIA],
+                CONF_FOLLOWUP_PRE_DURATION: user_input[CONF_FOLLOWUP_PRE_DURATION],
+                CONF_FOLLOWUP_PRE_VOLUME: user_input[CONF_FOLLOWUP_PRE_VOLUME],
+            })
+            return await self.async_step_followup_main()
+        return self.async_show_form(step_id="followup_pre", data_schema=vol.Schema({
+            vol.Required(CONF_FOLLOWUP_PRE_MEDIA, default=_tone_default(self._options[CONF_FOLLOWUP_PRE_MEDIA])): self._tone_selector(),
+            vol.Required(CONF_FOLLOWUP_PRE_DURATION, default=self._options[CONF_FOLLOWUP_PRE_DURATION]): self._number(1, 300, "s"),
+            vol.Required(CONF_FOLLOWUP_PRE_VOLUME, default=self._options[CONF_FOLLOWUP_PRE_VOLUME]): self._number(0, 100, "%"),
+        }))
+
+    async def async_step_followup_main(self, user_input: dict[str, Any] | None = None):
+        if self._options[CONF_FOLLOWUP_REUSE_PRIMARY]:
+            return await self._finish()
+        if user_input is not None:
+            self._store_media(user_input, CONF_FOLLOWUP_MAIN_MEDIA)
+            return await self._finish()
+        return self.async_show_form(step_id="followup_main", data_schema=vol.Schema({
+            vol.Optional(CONF_FOLLOWUP_MAIN_MEDIA, default=_media_default(self._options[CONF_FOLLOWUP_MAIN_MEDIA])): MEDIA_SELECTOR,
+        }))
+
+    async def _finish(self):
+        self.hass.config_entries.async_update_entry(self.config_entry, title=self._data[ALARM_NAME], data=self._data)
+        return self.async_create_entry(title="", data=self._options)
+
+    @staticmethod
+    def _tone_selector() -> SelectSelector:
+        return SelectSelector(SelectSelectorConfig(
+            options=[{"value": media_id, "label": label} for label, media_id in PRE_ALARM_TONES.items()],
+            mode=SelectSelectorMode.DROPDOWN,
+        ))
+
+    @staticmethod
+    def _number(minimum: int, maximum: int, unit: str) -> NumberSelector:
+        return NumberSelector(NumberSelectorConfig(min=minimum, max=maximum, step=1, unit_of_measurement=unit, mode=NumberSelectorMode.BOX))
 
     def _schema(self, options: Mapping[str, Any]) -> vol.Schema:
         return vol.Schema({
@@ -157,18 +225,9 @@ class MorningAlarmOptionsFlow(config_entries.OptionsFlow):
                     for step in (1, 2, 5, 10, 15, 30)
                 ])
             ),
-            vol.Required(CONF_PRIMARY_PRE_MEDIA, default=_tone_default(options[CONF_PRIMARY_PRE_MEDIA])): SelectSelector(
-                SelectSelectorConfig(
-                    options=[{"value": media_id, "label": label} for label, media_id in PRE_ALARM_TONES.items()],
-                    mode=SelectSelectorMode.DROPDOWN,
-                )
-            ),
+            vol.Required(CONF_PRIMARY_PRE_ENABLED, default=options[CONF_PRIMARY_PRE_ENABLED]): BooleanSelector(BooleanSelectorConfig()),
             vol.Optional(CONF_PRIMARY_MAIN_MEDIA, default=_media_default(options[CONF_PRIMARY_MAIN_MEDIA])): MEDIA_SELECTOR,
-            vol.Required(CONF_FOLLOWUP_PRE_MEDIA, default=_tone_default(options[CONF_FOLLOWUP_PRE_MEDIA])): SelectSelector(
-                SelectSelectorConfig(
-                    options=[{"value": media_id, "label": label} for label, media_id in PRE_ALARM_TONES.items()],
-                    mode=SelectSelectorMode.DROPDOWN,
-                )
-            ),
-            vol.Optional(CONF_FOLLOWUP_MAIN_MEDIA, default=_media_default(options[CONF_FOLLOWUP_MAIN_MEDIA])): MEDIA_SELECTOR,
+            vol.Required(CONF_PRIMARY_MAIN_VOLUME, default=options[CONF_PRIMARY_MAIN_VOLUME]): self._number(0, 100, "%"),
+            vol.Required(CONF_FOLLOWUP_ENABLED, default=options[CONF_FOLLOWUP_ENABLED]): BooleanSelector(BooleanSelectorConfig()),
+            vol.Required(CONF_STOP_AFTER, default=options[CONF_STOP_AFTER]): self._number(1, 180, "min"),
         })
