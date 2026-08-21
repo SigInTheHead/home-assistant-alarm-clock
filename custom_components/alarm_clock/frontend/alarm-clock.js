@@ -213,10 +213,20 @@ class AlarmClockAdvancedCard extends AlarmClockBase {
       const entity = this.find(key)?.entity_id;
       return entity ? { entity, name } : null;
     }).filter(Boolean);
-    this.shadowRoot.innerHTML = `${this.styles()}<ha-card><div class="card-header"><div>Alarm Clock advanced</div><div class="sub">${esc(subtitle)}</div></div><hui-entities-card></hui-entities-card></ha-card>`;
-    const card = this.shadowRoot.querySelector("hui-entities-card");
-    card.hass = this._hass;
-    card.setConfig({ entities, show_header_toggle: false });
+    const renderId = (this._nativeCardRenderId || 0) + 1;
+    this._nativeCardRenderId = renderId;
+    this.shadowRoot.innerHTML = "";
+    window.loadCardHelpers().then((helpers) => {
+      if (renderId !== this._nativeCardRenderId) return;
+      const card = helpers.createCardElement({
+        type: "entities",
+        title: `${subtitle} · Advanced`,
+        entities,
+        show_header_toggle: false,
+      });
+      card.hass = this._hass;
+      this.shadowRoot.append(card);
+    });
   }
 }
 
