@@ -60,27 +60,14 @@ class AlarmClockCard extends AlarmClockBase {
     const features = {
       alarm_times: this.config.show_alarm_times !== false ? `<div class="grid">${schedule.map(([label,key]) => `<div class="box"><label>${label}</label><br><b>${esc((this.value(key) || this._hass.states[this.config.entity]?.attributes?.day_times?.[key.replace("per_day_", "").replace("_time", "")] || "--:--").slice(0,5))}</b></div>`).join("")}</div>` : "",
       alarm_time_list: this.config.show_alarm_time_list === true ? `<div class="schedule-list">${schedule.map(([label,key]) => `<div class="row"><span>${label}</span><b>${esc((this.value(key) || this._hass.states[this.config.entity]?.attributes?.day_times?.[key.replace("per_day_", "").replace("_time", "")] || "--:--").slice(0,5))}</b></div>`).join("")}</div>` : "",
-      native_alarm_time_list: this.config.show_native_alarm_time_list === true ? `<div class="native-schedule-list"></div>` : "",
       override: this.config.show_override !== false ? `<div class="row override"><span>One-shot override <span class="sub">${esc((this.value("override_time") || "--:--").slice(0,5))}</span></span><ha-switch data-toggle="override" aria-label="Enable one-shot override"></ha-switch></div>` : "",
     };
-    const featureOrder = [...new Set([...(this.config.feature_order || []), "alarm_times", "override", ...(this.config.show_alarm_time_list === true ? ["alarm_time_list"] : []), ...(this.config.show_native_alarm_time_list === true ? ["native_alarm_time_list"] : [])])].filter((key) => key in features);
+    const featureOrder = [...new Set([...(this.config.feature_order || []), "alarm_times", "override", ...(this.config.show_alarm_time_list === true ? ["alarm_time_list"] : [])])].filter((key) => key in features);
     this.shadowRoot.innerHTML = `${this.styles()}<ha-card class="summary"><h2><ha-icon class="${enabled ? "enabled" : "disabled"}" icon="${esc(this.config.icon || "mdi:alarm")}"></ha-icon><span class="heading"><span>${esc(this.config.title || this.config.name || "Alarm Overview")}</span><span class="sub">${esc(friendlyNext())}</span></span></h2><div class="row"><span>Enabled</span><ha-switch data-toggle="enabled" aria-label="Enable alarm"></ha-switch></div>${featureOrder.map((key) => features[key]).join("")}</ha-card>`;
     this.shadowRoot.querySelectorAll("ha-switch[data-toggle]").forEach((el) => {
       el.checked = this.value(el.dataset.toggle) === "on";
       el.onchange = () => this.set(el.dataset.toggle, "switch", el.checked ? "turn_on" : "turn_off", {});
     });
-    const nativeList = this.shadowRoot.querySelector(".native-schedule-list");
-    if (nativeList) {
-      window.loadCardHelpers().then(async (helpers) => {
-        const card = await helpers.createCardElement({
-          type: "entities",
-          show_header_toggle: false,
-          entities: schedule.map(([name, key]) => ({ entity: this.find(key)?.entity_id, name })).filter((row) => row.entity),
-        });
-        card.hass = this._hass;
-        if (nativeList.isConnected) nativeList.append(card);
-      });
-    }
   }
 }
 
@@ -96,15 +83,13 @@ class AlarmClockCardConfigEditor extends HTMLElement {
     if (!this.shadowRoot || !this._config) return;
     const hasAlarmTimes = this._config.show_alarm_times !== false;
     const hasAlarmTimeList = this._config.show_alarm_time_list === true;
-    const hasNativeAlarmTimeList = this._config.show_native_alarm_time_list === true;
     const hasOverride = this._config.show_override !== false;
-    const featureOrder = [...new Set([...(this._config.feature_order || []), "alarm_times", "override", ...(hasAlarmTimeList ? ["alarm_time_list"] : []), ...(hasNativeAlarmTimeList ? ["native_alarm_time_list"] : [])])].filter((key) => ["alarm_times", "alarm_time_list", "native_alarm_time_list", "override"].includes(key));
-    const featureLabels = { alarm_times: "Alarm time cards", alarm_time_list: "Compact alarm time list", native_alarm_time_list: "Home Assistant alarm time list", override: "Override time" };
+    const featureOrder = [...new Set([...(this._config.feature_order || []), "alarm_times", "override", ...(hasAlarmTimeList ? ["alarm_time_list"] : [])])].filter((key) => ["alarm_times", "alarm_time_list", "override"].includes(key));
+    const featureLabels = { alarm_times: "Alarm time cards", alarm_time_list: "Compact alarm time list", override: "Override time" };
     const features = [
-      ...featureOrder.filter((key) => key === "alarm_times" ? hasAlarmTimes : key === "alarm_time_list" ? hasAlarmTimeList : key === "native_alarm_time_list" ? hasNativeAlarmTimeList : hasOverride).map((key) => `<div class="feature" draggable="true" data-feature="${key}"><span class="drag-handle" title="Drag to reorder">⠿</span><span>${featureLabels[key]}</span><button class="feature-action" data-feature="${key}">Remove</button></div>`),
+      ...featureOrder.filter((key) => key === "alarm_times" ? hasAlarmTimes : key === "alarm_time_list" ? hasAlarmTimeList : hasOverride).map((key) => `<div class="feature" draggable="true" data-feature="${key}"><span class="drag-handle" title="Drag to reorder">⠿</span><span>${featureLabels[key]}</span><button class="feature-action" data-feature="${key}">Remove</button></div>`),
       !hasAlarmTimes ? `<button class="add-feature" data-feature="alarm_times">+ Add alarm time cards</button>` : "",
       !hasAlarmTimeList ? `<button class="add-feature" data-feature="alarm_time_list">+ Add compact alarm time list</button>` : "",
-      !hasNativeAlarmTimeList ? `<button class="add-feature" data-feature="native_alarm_time_list">+ Add Home Assistant alarm time list</button>` : "",
       !hasOverride ? `<button class="add-feature" data-feature="override">+ Add override time</button>` : "",
     ].join("");
     this.shadowRoot.innerHTML = `<style>:host{display:block;padding:12px 0}.field{display:block;margin:0 0 16px}.field span{display:block;margin-bottom:6px;color:var(--primary-text-color);font-size:14px}.field small{display:block;margin-top:4px;color:var(--secondary-text-color)}input{box-sizing:border-box;width:100%;padding:10px;border:1px solid var(--divider-color);border-radius:6px;background:var(--card-background-color);color:var(--primary-text-color);font:inherit}ha-entity-picker,ha-icon-picker{display:block;width:100%}.features{border:1px solid var(--divider-color);border-radius:8px;overflow:hidden}.features-toggle,.feature-action{font:inherit;color:var(--primary-text-color);cursor:pointer}.features-toggle{display:flex;width:100%;align-items:center;justify-content:space-between;padding:12px;border:0;background:var(--card-background-color);font-weight:600}.features-body{padding:4px 12px 12px;border-top:1px solid var(--divider-color)}.feature{display:flex;align-items:center;gap:8px;padding:12px 0;cursor:grab}.feature-action{border:0;background:transparent;color:var(--primary-color);padding:6px;margin-left:auto}.drag-handle{color:var(--secondary-text-color);font-size:18px}.add-feature{border:1px solid var(--primary-color);background:transparent;color:var(--primary-color);border-radius:6px;padding:8px 10px;margin:4px 4px 4px 0}</style><label class="field"><span>Entity</span><ha-entity-picker id="entity"></ha-entity-picker><small>Select the root Alarm Clock switch.</small></label><label class="field"><span>Title</span><input data-key="title" value="${esc(this._config.title || this._config.name || "Alarm Overview")}"></label><label class="field"><span>Icon</span><ha-icon-picker id="icon"></ha-icon-picker></label><section class="features"><button class="features-toggle" id="features" aria-expanded="${this._featuresOpen ? "true" : "false"}"><span>Features</span><span>${this._featuresOpen ? "⌃" : "⌄"}</span></button>${this._featuresOpen ? `<div class="features-body">${features}</div>` : ""}</section>`;
@@ -134,8 +119,8 @@ class AlarmClockCardConfigEditor extends HTMLElement {
     this.shadowRoot.querySelector("#features").onclick = () => { this._featuresOpen = !this._featuresOpen; this.render(); };
     const setFeature = (feature, shown) => {
       const config = { ...this._config };
-      const key = { alarm_times: "show_alarm_times", alarm_time_list: "show_alarm_time_list", native_alarm_time_list: "show_native_alarm_time_list", override: "show_override" }[feature];
-      if (feature === "alarm_time_list" || feature === "native_alarm_time_list") config[key] = shown;
+      const key = { alarm_times: "show_alarm_times", alarm_time_list: "show_alarm_time_list", override: "show_override" }[feature];
+      if (feature === "alarm_time_list") config[key] = shown;
       else if (shown) delete config[key]; else config[key] = false;
       this._config = config;
       this.dispatchEvent(new CustomEvent("config-changed", { detail: { config }, bubbles: true, composed: true }));
