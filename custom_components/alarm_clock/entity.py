@@ -40,6 +40,7 @@ class MorningAlarmEntity(Entity):
         return {
             "alarm_clock_entry_id": self.coordinator.entry.entry_id,
             "alarm_clock_key": self.key,
+            "alarm_active": self.coordinator.is_active,
             "minute_granularity": self.coordinator.options[CONF_MINUTE_GRANULARITY],
             CONF_SCHEDULE_MODE: self.coordinator.options[CONF_SCHEDULE_MODE],
             CONF_DAY_TIMES: self.coordinator.options[CONF_DAY_TIMES],

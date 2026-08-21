@@ -58,6 +58,11 @@ class MorningAlarmCoordinator:
         self._listeners.append(listener)
         return lambda: self._listeners.remove(listener) if listener in self._listeners else None
 
+    @property
+    def is_active(self) -> bool:
+        """Whether an alarm occurrence can still advance to another phase."""
+        return self._occurrence is not None
+
     @callback
     def _notify(self) -> None:
         for listener in tuple(self._listeners): listener()
@@ -260,6 +265,17 @@ class MorningAlarmCoordinator:
                 _LOGGER.debug("media_stop failed for %s: %s", self.entry.title, err)
         self.status = STATUS_STOPPED
         self._notify()
+
+    async def async_stop_playback(self) -> None:
+        """Silence this phase while allowing the alarm sequence to continue."""
+        if not self._occurrence or self.status not in {
+            STATUS_PRE_ALARM,
+            STATUS_PLAYING,
+            STATUS_FOLLOWUP_PRE_ALARM,
+            STATUS_FOLLOWUP_PLAYING,
+        }:
+            return
+        await self._stop_playback_only(self._occurrence)
 
     async def _play_stage(self, token: str, follow_up: bool, late: bool = False) -> None:
         if token != self._occurrence or not self._snapshot: return

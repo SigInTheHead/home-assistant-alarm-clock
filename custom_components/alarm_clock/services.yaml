@@ -22,6 +22,14 @@ stop:
       required: true
       selector:
         text:
+stop_playback:
+  name: Stop current playback
+  description: Stop the currently playing alarm phase while allowing later phases to continue.
+  fields:
+    entry_id:
+      required: true
+      selector:
+        text:
 set_media:
   name: Set main media
   description: Set primary or follow-up main media from an Alarm Clock card.
