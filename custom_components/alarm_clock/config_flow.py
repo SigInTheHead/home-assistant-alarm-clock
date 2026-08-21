@@ -17,6 +17,7 @@ from homeassistant.helpers.selector import (
     NumberSelectorMode,
     SelectSelector,
     SelectSelectorConfig,
+    SelectSelectorMode,
 )
 
 from .const import (
@@ -157,11 +158,17 @@ class MorningAlarmOptionsFlow(config_entries.OptionsFlow):
                 ])
             ),
             vol.Required(CONF_PRIMARY_PRE_MEDIA, default=_tone_default(options[CONF_PRIMARY_PRE_MEDIA])): SelectSelector(
-                SelectSelectorConfig(options=[{"value": media_id, "label": label} for label, media_id in PRE_ALARM_TONES.items()])
+                SelectSelectorConfig(
+                    options=[{"value": media_id, "label": label} for label, media_id in PRE_ALARM_TONES.items()],
+                    mode=SelectSelectorMode.DROPDOWN,
+                )
             ),
             vol.Optional(CONF_PRIMARY_MAIN_MEDIA, default=_media_default(options[CONF_PRIMARY_MAIN_MEDIA])): MEDIA_SELECTOR,
             vol.Required(CONF_FOLLOWUP_PRE_MEDIA, default=_tone_default(options[CONF_FOLLOWUP_PRE_MEDIA])): SelectSelector(
-                SelectSelectorConfig(options=[{"value": media_id, "label": label} for label, media_id in PRE_ALARM_TONES.items()])
+                SelectSelectorConfig(
+                    options=[{"value": media_id, "label": label} for label, media_id in PRE_ALARM_TONES.items()],
+                    mode=SelectSelectorMode.DROPDOWN,
+                )
             ),
             vol.Optional(CONF_FOLLOWUP_MAIN_MEDIA, default=_media_default(options[CONF_FOLLOWUP_MAIN_MEDIA])): MEDIA_SELECTOR,
         })
