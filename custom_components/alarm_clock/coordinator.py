@@ -120,12 +120,15 @@ class MorningAlarmCoordinator:
 
     def _normal_time_for(self, date) -> Any | None:
         options, weekday = self.options, date.weekday()
-        if options[CONF_SCHEDULE_MODE] == SCHEDULE_PER_DAY and weekday < 5:
-            day = DAYS[weekday]
-            if not options[CONF_DAY_ENABLED].get(day, True): return None
-            return self._time(options[CONF_DAY_TIMES].get(day, "07:00:00"))
-        if weekday < 5: return self._time(options[CONF_WEEKDAY_TIME])
-        return self._time(options[CONF_SATURDAY_TIME] if weekday == 5 else options[CONF_SUNDAY_TIME])
+        if weekday < 5:
+            if options[CONF_SCHEDULE_MODE] == SCHEDULE_PER_DAY:
+                day = DAYS[weekday]
+                if not options[CONF_DAY_ENABLED].get(day, True): return None
+                return self._time(options[CONF_DAY_TIMES].get(day, "07:00:00"))
+            return self._time(options[CONF_WEEKDAY_TIME]) if options[CONF_WEEKDAY_ENABLED] else None
+        if weekday == 5:
+            return self._time(options[CONF_SATURDAY_TIME]) if options[CONF_SATURDAY_ENABLED] else None
+        return self._time(options[CONF_SUNDAY_TIME]) if options[CONF_SUNDAY_ENABLED] else None
 
     def _next_normal(self, now: datetime) -> datetime | None:
         for offset in range(8):
@@ -170,10 +173,11 @@ class MorningAlarmCoordinator:
                 times = dict(options[CONF_DAY_TIMES])
                 for day in WEEKDAY_DAYS: times[day] = options[CONF_WEEKDAY_TIME]
                 options[CONF_DAY_TIMES] = times
-                options[CONF_DAY_ENABLED] = {day: True for day in WEEKDAY_DAYS}
+                options[CONF_DAY_ENABLED] = {day: options[CONF_WEEKDAY_ENABLED] for day in WEEKDAY_DAYS}
             else:
                 enabled = [options[CONF_DAY_TIMES][day] for day in WEEKDAY_DAYS if options[CONF_DAY_ENABLED].get(day, True)]
                 if enabled: options[CONF_WEEKDAY_TIME] = min(enabled)
+                options[CONF_WEEKDAY_ENABLED] = bool(enabled)
         options[key] = value
         self.hass.config_entries.async_update_entry(self.entry, options=options)
         if key == CONF_ENABLED and not value and self._occurrence:

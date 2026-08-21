@@ -23,7 +23,7 @@ class AlarmTime(MorningAlarmEntity, TimeEntity):
 
 async def async_setup_entry(hass, entry, async_add_entities):
     c=hass.data["alarm_clock"][entry.entry_id]["coordinator"]
-    out=[AlarmTime(c, CONF_WEEKDAY_TIME,"Weekday",SCHEDULE_COMPACT),AlarmTime(c,CONF_SATURDAY_TIME,"Saturday",SCHEDULE_COMPACT),AlarmTime(c,CONF_SUNDAY_TIME,"Sunday",SCHEDULE_COMPACT),AlarmTime(c,CONF_OVERRIDE_TIME,"Override time")]
+    out=[AlarmTime(c, CONF_WEEKDAY_TIME,"Weekday",SCHEDULE_COMPACT),AlarmTime(c,CONF_SATURDAY_TIME,"Saturday"),AlarmTime(c,CONF_SUNDAY_TIME,"Sunday"),AlarmTime(c,CONF_OVERRIDE_TIME,"Override time")]
     # Individual schedules apply to working days only. Saturday and Sunday
     # always use the shared compact time entities above.
     out += [AlarmTime(c, f"per_day_{day}_time", day.title(), SCHEDULE_PER_DAY, day) for day in DAYS[:5]]
