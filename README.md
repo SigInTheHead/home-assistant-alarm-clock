@@ -48,6 +48,13 @@ type: custom:alarm-clock-editor-card
 entity: switch.tim_alarm_clock
 ```
 
+Example advanced playback card:
+
+```yaml
+type: custom:alarm-clock-advanced-card
+entity: switch.tim_alarm_clock
+```
+
 The root switch is the alarm's canonical entity (for example, `switch.tim_alarm_clock`). Select the device's **Alarm Clock** entity in the card editor; it controls the whole alarm and lets the cards locate all sibling entities.
 
 ## Playback behaviour
