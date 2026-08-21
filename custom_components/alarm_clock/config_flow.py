@@ -20,10 +20,10 @@ from homeassistant.helpers.selector import (
 )
 
 from .const import (
-    CONF_DAY_ENABLED, CONF_DAY_TIMES, CONF_FOLLOWUP_MAIN_MEDIA,
-    CONF_MEDIA_PLAYER, CONF_MINUTE_GRANULARITY, CONF_NAME as ALARM_NAME, CONF_PRIMARY_MAIN_MEDIA,
+    CONF_DAY_ENABLED, CONF_DAY_TIMES, CONF_FOLLOWUP_MAIN_MEDIA, CONF_FOLLOWUP_PRE_MEDIA,
+    CONF_MEDIA_PLAYER, CONF_MINUTE_GRANULARITY, CONF_NAME as ALARM_NAME, CONF_PRIMARY_MAIN_MEDIA, CONF_PRIMARY_PRE_MEDIA,
     CONF_SCHEDULE_MODE, DEFAULT_OPTIONS, DOMAIN, SCHEDULE_COMPACT,
-    SCHEDULE_PER_DAY, WEEKDAY_DAYS,
+    PRE_ALARM_TONES, SCHEDULE_PER_DAY, WEEKDAY_DAYS,
 )
 
 def _media_default(value: Any) -> Any:
@@ -43,6 +43,12 @@ def _media_default(value: Any) -> Any:
 # alarm has one deliberate output target, configured above, so constrain each
 # picker to audio and let the coordinator always play it on that target.
 MEDIA_SELECTOR = MediaSelector(MediaSelectorConfig(accept=["audio/*"]))
+
+
+def _tone_default(value: Any) -> str:
+    """Return a supported built-in tone URI for the options dropdown."""
+    media_id = value.get("media_content_id") if isinstance(value, Mapping) else value
+    return media_id if media_id in PRE_ALARM_TONES.values() else next(iter(PRE_ALARM_TONES.values()))
 
 
 def _with_schedule_mode(options: dict[str, Any], mode: str) -> dict[str, Any]:
@@ -118,6 +124,8 @@ class MorningAlarmOptionsFlow(config_entries.OptionsFlow):
             new_options = {
                 **options,
                 **updated_media,
+                CONF_PRIMARY_PRE_MEDIA: user_input[CONF_PRIMARY_PRE_MEDIA],
+                CONF_FOLLOWUP_PRE_MEDIA: user_input[CONF_FOLLOWUP_PRE_MEDIA],
                 CONF_MINUTE_GRANULARITY: user_input[CONF_MINUTE_GRANULARITY],
             }
             new_options = _with_schedule_mode(
@@ -148,6 +156,12 @@ class MorningAlarmOptionsFlow(config_entries.OptionsFlow):
                     for step in (1, 2, 5, 10, 15, 30)
                 ])
             ),
+            vol.Required(CONF_PRIMARY_PRE_MEDIA, default=_tone_default(options[CONF_PRIMARY_PRE_MEDIA])): SelectSelector(
+                SelectSelectorConfig(options=[{"value": media_id, "label": label} for label, media_id in PRE_ALARM_TONES.items()])
+            ),
             vol.Optional(CONF_PRIMARY_MAIN_MEDIA, default=_media_default(options[CONF_PRIMARY_MAIN_MEDIA])): MEDIA_SELECTOR,
+            vol.Required(CONF_FOLLOWUP_PRE_MEDIA, default=_tone_default(options[CONF_FOLLOWUP_PRE_MEDIA])): SelectSelector(
+                SelectSelectorConfig(options=[{"value": media_id, "label": label} for label, media_id in PRE_ALARM_TONES.items()])
+            ),
             vol.Optional(CONF_FOLLOWUP_MAIN_MEDIA, default=_media_default(options[CONF_FOLLOWUP_MAIN_MEDIA])): MEDIA_SELECTOR,
         })
