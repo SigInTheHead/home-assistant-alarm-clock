@@ -39,6 +39,7 @@ CONF_FOLLOWUP_REUSE_PRIMARY = "followup_reuse_primary"
 CONF_FOLLOWUP_MAIN_MEDIA = "followup_main_media"
 CONF_FOLLOWUP_MAIN_VOLUME = "followup_main_volume"
 CONF_STOP_AFTER = "stop_after"
+CONF_SNOOZE_DURATION = "snooze_duration"
 
 SCHEDULE_COMPACT = "compact"
 SCHEDULE_PER_DAY = "per_day"
@@ -54,6 +55,7 @@ NUMERIC_LIMITS = {
     CONF_FOLLOWUP_PRE_DURATION: (1, 30),
     CONF_FOLLOWUP_DELAY: (1, 30),
     CONF_STOP_AFTER: (1, 60),
+    CONF_SNOOZE_DURATION: (1, 30),
 }
 
 STATUS_DISABLED = "disabled"
@@ -62,6 +64,7 @@ STATUS_PRE_ALARM = "pre_alarm"
 STATUS_PLAYING = "playing"
 STATUS_FOLLOWUP_PRE_ALARM = "follow_up_pre_alarm"
 STATUS_FOLLOWUP_PLAYING = "follow_up_playing"
+STATUS_SNOOZED = "snoozed"
 STATUS_STOPPED = "stopped"
 
 DEFAULT_TIME = time(7, 0)
@@ -81,12 +84,14 @@ DEFAULT_OPTIONS = {
     CONF_FOLLOWUP_PRE_DURATION: 30,
     CONF_FOLLOWUP_REUSE_PRIMARY: True, CONF_FOLLOWUP_MAIN_MEDIA: None,
     CONF_FOLLOWUP_MAIN_VOLUME: 30, CONF_STOP_AFTER: 60,
+    CONF_SNOOZE_DURATION: 5,
 }
 
 SERVICE_TRIGGER = "trigger"
 SERVICE_TRIGGER_FOLLOW_UP = "trigger_follow_up"
 SERVICE_STOP = "stop"
 SERVICE_STOP_PLAYBACK = "stop_playback"
+SERVICE_SNOOZE = "snooze"
 SERVICE_SET_MEDIA = "set_media"
 MEDIA_OPTION_KEYS = {
     "primary_main": CONF_PRIMARY_MAIN_MEDIA,

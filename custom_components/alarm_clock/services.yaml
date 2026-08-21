@@ -30,6 +30,14 @@ stop_playback:
       required: true
       selector:
         text:
+snooze:
+  name: Snooze alarm
+  description: Silence the active alarm stage and continue it or the next stage after the configured snooze duration.
+  fields:
+    entry_id:
+      required: true
+      selector:
+        text:
 set_media:
   name: Set main media
   description: Set primary or follow-up main media from an Alarm Clock card.

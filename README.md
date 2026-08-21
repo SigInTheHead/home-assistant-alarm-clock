@@ -59,4 +59,6 @@ The root switch is the alarm's canonical entity (for example, `switch.tim_alarm_
 
 ## Playback behaviour
 
-Primary and follow-up sequences each support an independent built-in pre-alarm tone, volume, run duration, and main media. Choose the pre-alarm tones and main media from the optional Advanced card; disable a pre-alarm switch when it is not wanted. Main media uses Home Assistant's native media picker, so it can be local audio, radio, or another supported source. Built-in tracks loop for five minutes. Follow-up and automatic stop are measured from the primary start time.
+Primary and follow-up sequences each support an independent built-in pre-alarm tone, volume, run duration, and main media. Choose the pre-alarm tones and main media from the optional Alarm Playback card; disable a pre-alarm switch when it is not wanted. Main media uses Home Assistant's native media picker, so it can be local audio, radio, or another supported source. Built-in tracks loop for five minutes. Primary main media is required before an alarm can be enabled; a follow-up needs its own main media unless it reuses the primary selection.
+
+The optional Overview-card Snooze feature silences the current sound for the configured duration, then starts the next configured alarm stage. Snoozing the final follow-up main media replays it after the delay. Automatic stop is measured from the first alarm trigger and remains absolute while snoozed.

@@ -10,7 +10,7 @@ from typing import Any
 from uuid import uuid4
 
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import CALLBACK_TYPE, HomeAssistant, callback
+from homeassistant.core import CALLBACK_TYPE, HomeAssistant, HomeAssistantError, callback
 from homeassistant.helpers.event import async_track_point_in_time
 from homeassistant.util import dt as dt_util
 
@@ -27,12 +27,14 @@ class MorningAlarmCoordinator:
         self._override_cancel: CALLBACK_TYPE | None = None
         self._follow_cancel: CALLBACK_TYPE | None = None
         self._stop_cancel: CALLBACK_TYPE | None = None
+        self._snooze_cancel: CALLBACK_TYPE | None = None
         self._stage_task: asyncio.Task | None = None
         self._occurrence: str | None = None
         self._snapshot: dict[str, Any] | None = None
         self._last_requested_id: str | None = None
         self._stop_deadline: datetime | None = None
         self._late_followup = False
+        self._current_stage: str | None = None
         self.status = STATUS_DISABLED
         self.next_alarm: datetime | None = None
         self._listeners: list[Callable[[], None]] = []
@@ -63,6 +65,25 @@ class MorningAlarmCoordinator:
         """Whether an alarm occurrence can still advance to another phase."""
         return self._occurrence is not None
 
+    @property
+    def configuration_error(self) -> str | None:
+        """Return the reason this alarm cannot be enabled, if any."""
+        return self._configuration_error_for(self.options)
+
+    @property
+    def snooze_would_stop(self) -> bool:
+        """Whether a new snooze cannot complete before the stop deadline."""
+        return bool(
+            self._occurrence
+            and self._stop_deadline
+            and dt_util.now() + timedelta(minutes=self.options[CONF_SNOOZE_DURATION]) >= self._stop_deadline
+        )
+
+    @property
+    def stop_deadline(self) -> datetime | None:
+        """Return the absolute stop deadline for the active occurrence."""
+        return self._stop_deadline
+
     @callback
     def _notify(self) -> None:
         for listener in tuple(self._listeners): listener()
@@ -70,6 +91,9 @@ class MorningAlarmCoordinator:
     async def async_start(self) -> None:
         """Restore the next schedule, catching up a recent missed trigger once."""
         options, now = self.options, dt_util.now()
+        if options[CONF_ENABLED] and self.configuration_error:
+            await self.async_set_option(CONF_ENABLED, False)
+            return
         if options[CONF_ENABLED]:
             if options[CONF_OVERRIDE]:
                 candidate = dt_util.as_local(datetime.combine(now.date(), self._time(options[CONF_OVERRIDE_TIME])))
@@ -94,6 +118,9 @@ class MorningAlarmCoordinator:
     async def async_reschedule(self) -> None:
         self._cancel_schedule()
         options = self.options
+        if options[CONF_ENABLED] and self.configuration_error:
+            await self.async_set_option(CONF_ENABLED, False)
+            return
         if not options[CONF_ENABLED]:
             self.status = STATUS_DISABLED
             self.next_alarm = None
@@ -183,25 +210,49 @@ class MorningAlarmCoordinator:
                 enabled = [options[CONF_DAY_TIMES][day] for day in WEEKDAY_DAYS if options[CONF_DAY_ENABLED].get(day, True)]
                 if enabled: options[CONF_WEEKDAY_TIME] = min(enabled)
                 options[CONF_WEEKDAY_ENABLED] = bool(enabled)
+        if key == CONF_ENABLED and value and self.configuration_error:
+            raise HomeAssistantError(self.configuration_error)
         options[key] = value
+        disable_for_missing_media = key != CONF_ENABLED and options[CONF_ENABLED] and self._configuration_error_for(options)
+        if disable_for_missing_media:
+            options[CONF_ENABLED] = False
         self.hass.config_entries.async_update_entry(self.entry, options=options)
-        if key == CONF_ENABLED and not value and self._occurrence:
-            await self._cancel_active_stages_keep_stop()
+        if (key == CONF_ENABLED and not value or disable_for_missing_media) and self._occurrence:
+            await self.async_stop(manual=True)
 
     async def async_set_media(self, stage: str, media: dict[str, Any] | None) -> None:
         """Store a main-media selector value from the optional dashboard card."""
         key = MEDIA_OPTION_KEYS[stage]
         if media is not None and not media.get("media_content_id"):
             return
-        self.hass.config_entries.async_update_entry(
-            self.entry, options={**self.options, key: media}
-        )
+        options = {**self.options, key: media}
+        disable_for_missing_media = options[CONF_ENABLED] and self._configuration_error_for(options)
+        if disable_for_missing_media:
+            options[CONF_ENABLED] = False
+        self.hass.config_entries.async_update_entry(self.entry, options=options)
+        if disable_for_missing_media and self._occurrence:
+            await self.async_stop(manual=True)
+
+    @staticmethod
+    def _configuration_error_for(options: dict[str, Any]) -> str | None:
+        primary = Media.from_value(options[CONF_PRIMARY_MAIN_MEDIA])
+        if not primary:
+            return "Choose primary main media before enabling the alarm."
+        if options[CONF_FOLLOWUP_ENABLED] and not options[CONF_FOLLOWUP_REUSE_PRIMARY]:
+            if not Media.from_value(options[CONF_FOLLOWUP_MAIN_MEDIA]):
+                return "Choose follow-up main media or reuse primary main media before enabling the alarm."
+        return None
 
     async def _cancel_active_stages_keep_stop(self) -> None:
-        if self._stage_task: self._stage_task.cancel()
+        if self._stage_task: self._stage_task.cancel(); self._stage_task = None
         if self._follow_cancel: self._follow_cancel(); self._follow_cancel = None
+        if self._snooze_cancel: self._snooze_cancel(); self._snooze_cancel = None
 
     async def async_trigger(self, manual: bool) -> None:
+        if self.configuration_error:
+            if self.options[CONF_ENABLED]:
+                await self.async_set_option(CONF_ENABLED, False)
+            return
         if not manual and not self.options[CONF_ENABLED]:
             await self.async_reschedule(); return
         await self._cancel_active_stages_keep_stop()
@@ -233,8 +284,11 @@ class MorningAlarmCoordinator:
     async def async_trigger_follow_up(self, standalone: bool = False, token: str | None = None, late: bool = False) -> None:
         if not standalone and token != self._occurrence: return
         if standalone:
+            if self.configuration_error:
+                return
             token = uuid4().hex
             self._occurrence, self._snapshot = token, deepcopy(self.options)
+            self._schedule_stop(token, dt_util.now() + timedelta(minutes=self._snapshot[CONF_STOP_AFTER]))
         if self._stage_task: self._stage_task.cancel()
         self._stage_task = self.hass.async_create_task(self._play_stage(token, True, late=late))
 
@@ -257,14 +311,18 @@ class MorningAlarmCoordinator:
         """Silence the main stage while retaining a late follow-up beep callback."""
         if token != self._occurrence:
             return
+        await self._stop_media(force)
+        self.status = STATUS_STOPPED
+        self._notify()
+
+    async def _stop_media(self, force: bool = False) -> None:
+        """Stop the configured player when it is playing this alarm's media."""
         state = self.hass.states.get(self.entry.data[CONF_MEDIA_PLAYER])
         if force or (self._last_requested_id and state and state.attributes.get("media_content_id") == self._last_requested_id):
             try:
                 await self.hass.services.async_call("media_player", "media_stop", {"entity_id": self.entry.data[CONF_MEDIA_PLAYER]}, blocking=True)
             except Exception as err:
                 _LOGGER.debug("media_stop failed for %s: %s", self.entry.title, err)
-        self.status = STATUS_STOPPED
-        self._notify()
 
     async def async_stop_playback(self) -> None:
         """Silence this phase while allowing the alarm sequence to continue."""
@@ -277,22 +335,92 @@ class MorningAlarmCoordinator:
             return
         await self._stop_playback_only(self._occurrence, force=True)
 
+    async def async_snooze(self) -> None:
+        """Silence the current stage and resume the appropriate next stage later."""
+        if not self._occurrence or self.status not in {
+            STATUS_PRE_ALARM,
+            STATUS_PLAYING,
+            STATUS_FOLLOWUP_PRE_ALARM,
+            STATUS_FOLLOWUP_PLAYING,
+        }:
+            return
+        if self.snooze_would_stop:
+            await self.async_stop(manual=True)
+            return
+        next_stage = self._next_snooze_stage()
+        if not next_stage:
+            await self.async_stop(manual=True)
+            return
+        token = self._occurrence
+        if self._stage_task:
+            self._stage_task.cancel()
+            self._stage_task = None
+        if self._follow_cancel:
+            self._follow_cancel()
+            self._follow_cancel = None
+        self._late_followup = False
+        await self._stop_media(force=True)
+        self.status = STATUS_SNOOZED
+        self._notify()
+        deadline = dt_util.now() + timedelta(minutes=self._snapshot[CONF_SNOOZE_DURATION])
+
+        @callback
+        def resume_callback(now: datetime) -> None:
+            self.hass.async_create_task(self._async_resume_snooze(token, next_stage))
+
+        self._snooze_cancel = async_track_point_in_time(self.hass, resume_callback, deadline)
+
+    def _next_snooze_stage(self) -> str | None:
+        """Return the next configured stage, or repeat the active main media."""
+        if self._current_stage == "primary_pre":
+            return "primary_main"
+        if self._current_stage == "primary_main":
+            return "followup_pre" if self._snapshot[CONF_FOLLOWUP_ENABLED] else "primary_main"
+        if self._current_stage == "followup_pre":
+            return "followup_main"
+        if self._current_stage == "followup_main":
+            return "followup_main"
+        return None
+
+    async def _async_resume_snooze(self, token: str, stage: str) -> None:
+        if token != self._occurrence:
+            return
+        self._snooze_cancel = None
+        if self._stop_deadline and dt_util.now() >= self._stop_deadline:
+            await self.async_stop(token=token)
+            return
+        if stage == "primary_main":
+            self._stage_task = self.hass.async_create_task(self._play_main_stage(token, False))
+        elif stage == "followup_pre":
+            self._stage_task = self.hass.async_create_task(self._play_stage(token, True))
+        else:
+            self._stage_task = self.hass.async_create_task(self._play_main_stage(token, True))
+
     async def _play_stage(self, token: str, follow_up: bool, late: bool = False) -> None:
         if token != self._occurrence or not self._snapshot: return
         opt, prefix = self._snapshot, "followup" if follow_up else "primary"
         pre_enabled, pre_media = opt[f"{prefix}_pre_enabled"], Media.from_value(opt[f"{prefix}_pre_media"])
         if pre_enabled and pre_media:
+            self._current_stage = "followup_pre" if follow_up else "primary_pre"
             self.status = STATUS_FOLLOWUP_PRE_ALARM if follow_up else STATUS_PRE_ALARM; self._notify()
             await self._play_pre_alarm(token, pre_media, opt[f"{prefix}_pre_volume"], opt[f"{prefix}_pre_duration"])
         if token != self._occurrence or late: 
             if late: await self.async_stop(token=token)
             return
+        await self._play_main_stage(token, follow_up)
+
+    async def _play_main_stage(self, token: str, follow_up: bool) -> None:
+        """Play the selected main media without replaying its pre-alarm."""
+        if token != self._occurrence or not self._snapshot:
+            return
+        opt = self._snapshot
         media = Media.from_value(opt[CONF_PRIMARY_MAIN_MEDIA] if not follow_up or opt[CONF_FOLLOWUP_REUSE_PRIMARY] else opt[CONF_FOLLOWUP_MAIN_MEDIA])
         volume = opt[CONF_FOLLOWUP_MAIN_VOLUME] if follow_up else opt[CONF_PRIMARY_MAIN_VOLUME]
         if media:
+            self._current_stage = "followup_main" if follow_up else "primary_main"
             self.status = STATUS_FOLLOWUP_PLAYING if follow_up else STATUS_PLAYING; self._notify()
             await self._play_media(media, volume)
-        elif pre_enabled and pre_media:
+        elif not follow_up and opt[CONF_PRIMARY_PRE_ENABLED]:
             # A five-minute built-in tone can outlast the chosen pre-alarm
             # duration when there is no main media to replace it.
             await self._stop_playback_only(token)
@@ -323,6 +451,7 @@ class MorningAlarmCoordinator:
         if self._stage_task: self._stage_task.cancel(); self._stage_task = None
         if self._follow_cancel: self._follow_cancel(); self._follow_cancel = None
         if self._stop_cancel: self._stop_cancel(); self._stop_cancel = None
+        if self._snooze_cancel: self._snooze_cancel(); self._snooze_cancel = None
         state = self.hass.states.get(self.entry.data[CONF_MEDIA_PLAYER])
         if manual or (self._last_requested_id and state and state.attributes.get("media_content_id") == self._last_requested_id):
             try:
@@ -330,7 +459,7 @@ class MorningAlarmCoordinator:
             except Exception as err:
                 _LOGGER.debug("media_stop failed for %s: %s", self.entry.title, err)
         self.status, self._occurrence, self._stop_deadline, self._late_followup = STATUS_STOPPED, None, None, False
-        self._snapshot = None; self._notify()
+        self._snapshot = None; self._current_stage = None; self._notify()
         await self.async_reschedule()
 
     async def async_stop_runtime(self) -> None:
@@ -339,7 +468,9 @@ class MorningAlarmCoordinator:
         if self._stage_task: self._stage_task.cancel(); self._stage_task = None
         if self._follow_cancel: self._follow_cancel(); self._follow_cancel = None
         if self._stop_cancel: self._stop_cancel(); self._stop_cancel = None
+        if self._snooze_cancel: self._snooze_cancel(); self._snooze_cancel = None
         self._occurrence = None
         self._snapshot = None
         self._stop_deadline = None
         self._late_followup = False
+        self._current_stage = None
