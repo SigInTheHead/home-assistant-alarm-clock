@@ -40,5 +40,3 @@ set_media:
     media:
       selector:
         media:
-          media_content_types:
-            - music

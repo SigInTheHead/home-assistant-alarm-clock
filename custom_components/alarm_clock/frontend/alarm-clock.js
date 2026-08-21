@@ -8,7 +8,7 @@ class AlarmClockBase extends HTMLElement {
     this._hass = hass;
     if (!previous || this._alarmStateChanged(previous, hass)) this.render();
   }
-  connectedCallback() { this.attachShadow({ mode: "open" }); this.render(); }
+  connectedCallback() { if (!this.shadowRoot) this.attachShadow({ mode: "open" }); this.render(); }
   _alarmStateChanged(previous, current) {
     const root = this.config?.entity;
     const entryId = current.states?.[root]?.attributes?.alarm_clock_entry_id || previous.states?.[root]?.attributes?.alarm_clock_entry_id;
@@ -270,10 +270,8 @@ class AlarmClockAdvancedCard extends AlarmClockBase {
   }
 }
 
-customElements.define("alarm-clock-card", AlarmClockCard);
-customElements.define("alarm-clock-editor-card", AlarmClockEditorCard);
-customElements.define("alarm-clock-advanced-card", AlarmClockAdvancedCard);
-customElements.define("alarm-clock-card-config-editor", AlarmClockCardConfigEditor);
-customElements.define("alarm-clock-editor-card-config-editor", AlarmClockEditorCardConfigEditor);
+[["alarm-clock-card", AlarmClockCard], ["alarm-clock-editor-card", AlarmClockEditorCard], ["alarm-clock-advanced-card", AlarmClockAdvancedCard], ["alarm-clock-card-config-editor", AlarmClockCardConfigEditor], ["alarm-clock-editor-card-config-editor", AlarmClockEditorCardConfigEditor]].forEach(([name, element]) => {
+  if (!customElements.get(name)) customElements.define(name, element);
+});
 window.customCards = window.customCards || [];
 window.customCards.push({ type:"alarm-clock-card", name:"Alarm Clock", description:"Alarm Clock summary" }, { type:"alarm-clock-editor-card", name:"Alarm Clock Editor", description:"Alarm Clock schedule controls" }, { type:"alarm-clock-advanced-card", name:"Alarm Clock Advanced", description:"Alarm Clock playback controls" });

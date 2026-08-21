@@ -203,7 +203,14 @@ class MorningAlarmCoordinator:
         self._schedule_stop(token, started + timedelta(minutes=self._snapshot[CONF_STOP_AFTER]))
         if self._snapshot[CONF_FOLLOWUP_ENABLED]:
             self._late_followup = self._snapshot[CONF_FOLLOWUP_DELAY] >= self._snapshot[CONF_STOP_AFTER]
-            self._follow_cancel = async_track_point_in_time(self.hass, lambda now: self._schedule_follow_up(token, now), started + timedelta(minutes=self._snapshot[CONF_FOLLOWUP_DELAY]))
+            @callback
+            def follow_up_callback(now: datetime) -> None:
+                self._schedule_follow_up(token, now)
+
+            self._follow_cancel = async_track_point_in_time(
+                self.hass, follow_up_callback,
+                started + timedelta(minutes=self._snapshot[CONF_FOLLOWUP_DELAY]),
+            )
         else:
             self._late_followup = False
         self._stage_task = self.hass.async_create_task(self._play_stage(token, False))
@@ -224,7 +231,11 @@ class MorningAlarmCoordinator:
 
     def _schedule_stop(self, token: str, deadline: datetime) -> None:
         self._stop_deadline = deadline
-        self._stop_cancel = async_track_point_in_time(self.hass, lambda now: self._schedule_stop_callback(token), deadline)
+        @callback
+        def stop_callback(now: datetime) -> None:
+            self._schedule_stop_callback(token)
+
+        self._stop_cancel = async_track_point_in_time(self.hass, stop_callback, deadline)
 
     @callback
     def _schedule_stop_callback(self, token: str) -> None:
