@@ -58,7 +58,7 @@ class AlarmClockCard extends AlarmClockBase {
       return `Next: ${date.toLocaleDateString([], { weekday: "long", day: "numeric", month: "short" })} at ${at}`;
     };
     const features = {
-      alarm_times: this.config.show_alarm_times !== false ? `<div class="grid">${schedule.map(([label,key]) => `<div class="box"><label>${label}</label><br><b>${esc((this.value(key) || this._hass.states[this.config.entity]?.attributes?.day_times?.[key.replace("per_day_", "").replace("_time", "")] || "--:--").slice(0,5))}</b></div>`).join("")}</div>` : "",
+      alarm_times: this.config.show_alarm_times !== false ? `<div class="schedule-list">${schedule.map(([label,key]) => `<div class="row"><span>${label}</span><b>${esc((this.value(key) || this._hass.states[this.config.entity]?.attributes?.day_times?.[key.replace("per_day_", "").replace("_time", "")] || "--:--").slice(0,5))}</b></div>`).join("")}</div>` : "",
       override: this.config.show_override !== false ? `<div class="row override"><span>Override ${esc((this.value("override_time") || "--:--").slice(0,5))}</span></div>` : "",
     };
     const featureOrder = [...new Set([...(this.config.feature_order || []), "alarm_times", "override"])].filter((key) => key in features);
