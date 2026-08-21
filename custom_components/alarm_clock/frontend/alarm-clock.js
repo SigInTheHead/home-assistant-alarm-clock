@@ -208,17 +208,15 @@ class AlarmClockAdvancedCard extends AlarmClockBase {
     if (!this.shadowRoot || !this._hass || !this.config) return;
     const rows = [["primary_pre_enabled", "Primary pre-alarm"], ["primary_pre_duration", "Run for"], ["primary_pre_volume", "Pre-alarm volume"], ["primary_main_volume", "Main volume"], ["followup_enabled", "Follow-up"], ["followup_delay", "Follow-up delay"], ["followup_pre_enabled", "Follow-up pre-alarm"], ["followup_pre_duration", "Follow-up run for"], ["followup_pre_volume", "Follow-up pre-alarm volume"], ["followup_reuse_primary", "Reuse primary main media"], ["followup_main_volume", "Follow-up main volume"], ["stop_after", "Stop after"]];
     const rootName = this._hass.states[this.config.entity]?.attributes?.friendly_name || this.config.name || "Alarm Clock";
-    const subtitle = rootName.replace(/^Alarm Clock\s*-\s*/i, "");
-    this.shadowRoot.innerHTML = `${this.styles()}<ha-card><div class="card-header"><div>Alarm Clock advanced</div><div class="sub">${esc(subtitle)}</div></div><div class="entities"></div></ha-card>`;
-    const container = this.shadowRoot.querySelector(".entities");
-    rows.forEach(([key, name]) => {
+    const subtitle = rootName.replace(/^Alarm Clock\s*-\s*/i, "").replace(/\s+Alarm Clock$/i, "");
+    const entities = rows.map(([key, name]) => {
       const entity = this.find(key)?.entity_id;
-      if (!entity) return;
-      const row = document.createElement("hui-entity-row");
-      row.hass = this._hass;
-      row.setConfig({ entity, name });
-      container.append(row);
-    });
+      return entity ? { entity, name } : null;
+    }).filter(Boolean);
+    this.shadowRoot.innerHTML = `${this.styles()}<ha-card><div class="card-header"><div>Alarm Clock advanced</div><div class="sub">${esc(subtitle)}</div></div><hui-entities-card></hui-entities-card></ha-card>`;
+    const card = this.shadowRoot.querySelector("hui-entities-card");
+    card.hass = this._hass;
+    card.setConfig({ entities, show_header_toggle: false });
   }
 }
 
