@@ -218,30 +218,25 @@ class AlarmClockAdvancedCard extends AlarmClockBase {
   render() {
     if (!this.shadowRoot || !this._hass || !this.config) return;
     const enabled = (key) => this.value(key) === "on";
-    const rows = [["primary_pre_enabled", "Primary pre-alarm"]];
-    if (enabled("primary_pre_enabled")) rows.push(["primary_pre_media", "Pre-alarm tone"], ["primary_pre_duration", "Run for"], ["primary_pre_volume", "Pre-alarm volume"]);
-    rows.push(["primary_main_volume", "Main volume"], ["followup_enabled", "Follow-up"]);
+    const controls = [["row", "primary_pre_enabled", "Primary pre-alarm"]];
+    if (enabled("primary_pre_enabled")) controls.push(["row", "primary_pre_media", "Pre-alarm tone"], ["row", "primary_pre_duration", "Run for"], ["row", "primary_pre_volume", "Pre-alarm volume"]);
+    controls.push(["row", "primary_main_volume", "Main volume"], ["media", "primary_main", "primary_main_media", "Primary main media"], ["row", "followup_enabled", "Follow-up"]);
     if (enabled("followup_enabled")) {
-      rows.push(["followup_delay", "Follow-up delay"], ["followup_pre_enabled", "Follow-up pre-alarm"]);
-      if (enabled("followup_pre_enabled")) rows.push(["followup_pre_media", "Follow-up pre-alarm tone"], ["followup_pre_duration", "Follow-up run for"], ["followup_pre_volume", "Follow-up pre-alarm volume"]);
-      rows.push(["followup_reuse_primary", "Reuse primary main media"], ["followup_main_volume", "Follow-up main volume"]);
+      controls.push(["row", "followup_delay", "Follow-up delay"], ["row", "followup_pre_enabled", "Follow-up pre-alarm"]);
+      if (enabled("followup_pre_enabled")) controls.push(["row", "followup_pre_media", "Follow-up pre-alarm tone"], ["row", "followup_pre_duration", "Follow-up run for"], ["row", "followup_pre_volume", "Follow-up pre-alarm volume"]);
+      controls.push(["row", "followup_reuse_primary", "Reuse primary main media"]);
+      if (!enabled("followup_reuse_primary")) controls.push(["media", "followup_main", "followup_main_media", "Follow-up main media"]);
+      controls.push(["row", "followup_main_volume", "Follow-up main volume"]);
     }
-    rows.push(["stop_after", "Stop after"]);
+    controls.push(["row", "stop_after", "Stop after"]);
     const rootName = this._hass.states[this.config.entity]?.attributes?.friendly_name || this.config.name || "Alarm Clock";
     const subtitle = rootName.replace(/^Alarm Clock\s*-\s*/i, "").replace(/\s+Alarm Clock$/i, "");
-    const entities = rows.map(([key, name]) => {
-      const entity = this.find(key)?.entity_id;
-      return entity ? { entity, name } : null;
-    }).filter(Boolean);
-    const mediaSelectors = [["primary_main", "primary_main_media", "Primary main media"]];
-    if (enabled("followup_enabled") && !enabled("followup_reuse_primary")) mediaSelectors.push(["followup_main", "followup_main_media", "Follow-up main media"]);
     const renderId = (this._nativeRowRenderId || 0) + 1;
     this._nativeRowRenderId = renderId;
-    this.shadowRoot.innerHTML = `${this.styles()}<ha-card><h2><ha-icon icon="${esc(this.config.icon || "mdi:cog")}"></ha-icon> ${esc(this.config.title || "Alarm Clock advanced")}</h2><div class="sub">${esc(subtitle)}</div><div class="media-selectors"></div><div class="entities"></div></ha-card>`;
+    this.shadowRoot.innerHTML = `${this.styles()}<ha-card><h2><ha-icon icon="${esc(this.config.icon || "mdi:cog")}"></ha-icon> ${esc(this.config.title || "Alarm Clock advanced")}</h2><div class="sub">${esc(subtitle)}</div><div class="entities"></div></ha-card>`;
     const container = this.shadowRoot.querySelector(".entities");
-    const mediaContainer = this.shadowRoot.querySelector(".media-selectors");
     const entryId = this._hass.states[this.config.entity]?.attributes?.alarm_clock_entry_id;
-    mediaSelectors.forEach(([stage, key, label]) => {
+    const appendMediaSelector = (stage, key, label) => {
       const wrapper = document.createElement("div");
       wrapper.className = "media-selector";
       const heading = document.createElement("label");
@@ -252,13 +247,22 @@ class AlarmClockAdvancedCard extends AlarmClockBase {
       selector.value = this.value(key) || null;
       selector.addEventListener("value-changed", (event) => this._hass.callService("alarm_clock", "set_media", { entry_id: entryId, stage, media: event.detail.value || null }));
       wrapper.append(heading, selector);
-      mediaContainer.append(wrapper);
-    });
+      container.append(wrapper);
+    };
     window.loadCardHelpers().then(async (helpers) => {
       if (renderId !== this._nativeRowRenderId) return;
-      for (const config of entities) {
-        const row = await helpers.createRowElement(config);
+      for (const control of controls) {
         if (renderId !== this._nativeRowRenderId) return;
+        const [type] = control;
+        if (type === "media") {
+          appendMediaSelector(control[1], control[2], control[3]);
+          continue;
+        }
+        const [, key, label] = control;
+        const entity = this.find(key)?.entity_id;
+        if (!entity) continue;
+        const config = { entity, name: label };
+        const row = await helpers.createRowElement(config);
         row.hass = this._hass;
         container.append(row);
       }
