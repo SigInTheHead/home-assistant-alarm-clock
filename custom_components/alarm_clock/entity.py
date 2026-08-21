@@ -41,6 +41,7 @@ class MorningAlarmEntity(Entity):
         return {
             "alarm_clock_entry_id": self.coordinator.entry.entry_id,
             "alarm_clock_key": self.key,
+            "status": self.coordinator.status,
             "alarm_active": self.coordinator.is_active,
             "alarm_configuration_error": self.coordinator.configuration_error,
             "snooze_would_stop": self.coordinator.snooze_would_stop,
