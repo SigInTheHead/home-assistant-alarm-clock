@@ -208,12 +208,20 @@ class AlarmClockAdvancedCard extends AlarmClockBase {
     if (!this.shadowRoot || !this._hass || !this.config) return;
     const toggle = (label,key) => `<div class="row"><span>${label}</span><ha-switch data-toggle="${key}" aria-label="${label}"></ha-switch></div>`;
     const num = (label,key) => `<div class="row"><label>${label}</label><input data-number="${key}" type="number" value="${esc(this.value(key))}"></div>`;
-    this.shadowRoot.innerHTML = `${this.styles()}<ha-card><h2>⚙️ ${esc(this.config.name || "Alarm Clock advanced")}</h2><section>${toggle("Primary pre-alarm","primary_pre_enabled")}${num("Primary pre-alarm run for (seconds)","primary_pre_duration")}${num("Primary pre-alarm volume (%)","primary_pre_volume")}${num("Primary main volume (%)","primary_main_volume")}${toggle("Follow-up","followup_enabled")}${num("Follow-up delay (minutes)","followup_delay")}${toggle("Follow-up pre-alarm","followup_pre_enabled")}${num("Follow-up pre-alarm run for (seconds)","followup_pre_duration")}${num("Follow-up pre-alarm volume (%)","followup_pre_volume")}${toggle("Reuse primary main media","followup_reuse_primary")}${num("Follow-up main volume (%)","followup_main_volume")}${num("Stop after (minutes)","stop_after")}</section></ha-card>`;
+    const slider = (label,key,min,max,step,unit) => {
+      const value = Number(this.value(key)) || min;
+      return `<div class="row"><label>${label}</label><input data-slider="${key}" type="range" min="${min}" max="${max}" step="${step}" value="${value}" aria-label="${label}"><output>${value}${unit}</output></div>`;
+    };
+    this.shadowRoot.innerHTML = `${this.styles()}<ha-card><h2>⚙️ ${esc(this.config.name || "Alarm Clock advanced")}</h2><section>${toggle("Primary pre-alarm","primary_pre_enabled")}${slider("Primary pre-alarm run for","primary_pre_duration",1,300,1," s")}${slider("Primary pre-alarm volume","primary_pre_volume",0,100,5,"%")}${slider("Primary main volume","primary_main_volume",0,100,5,"%")}${toggle("Follow-up","followup_enabled")}${num("Follow-up delay (minutes)","followup_delay")}${toggle("Follow-up pre-alarm","followup_pre_enabled")}${slider("Follow-up pre-alarm run for","followup_pre_duration",1,300,1," s")}${slider("Follow-up pre-alarm volume","followup_pre_volume",0,100,5,"%")}${toggle("Reuse primary main media","followup_reuse_primary")}${slider("Follow-up main volume","followup_main_volume",0,100,5,"%")}${num("Stop after (minutes)","stop_after")}</section></ha-card>`;
     this.shadowRoot.querySelectorAll("ha-switch[data-toggle]").forEach((el) => {
       el.checked = this.value(el.dataset.toggle) === "on";
       el.onchange = () => this.set(el.dataset.toggle,"switch",el.checked?"turn_on":"turn_off",{});
     });
     this.shadowRoot.querySelectorAll("[data-number]").forEach((el)=>el.onchange=()=>this.set(el.dataset.number,"number","set_value",{value:Number(el.value)}));
+    this.shadowRoot.querySelectorAll("[data-slider]").forEach((el) => {
+      el.oninput = () => { el.nextElementSibling.textContent = `${el.value}${el.dataset.slider.includes("volume") ? "%" : " s"}`; };
+      el.onchange = () => this.set(el.dataset.slider,"number","set_value",{value:Number(el.value)});
+    });
   }
 }
 
