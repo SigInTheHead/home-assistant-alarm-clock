@@ -15,9 +15,9 @@ async def async_setup_entry(hass, entry, async_add_entities):
     c=hass.data[DOMAIN][entry.entry_id][DATA_COORDINATOR]
     specs=[
       (CONF_PRIMARY_PRE_VOLUME,"Primary pre-alarm volume",0,100,5,"%",NumberMode.SLIDER),(CONF_PRIMARY_MAIN_VOLUME,"Primary main volume",0,100,5,"%",NumberMode.SLIDER),
-      (CONF_PRIMARY_PRE_DURATION,"Primary pre-alarm duration",1,300,1,"s",NumberMode.SLIDER),
-      (CONF_FOLLOWUP_DELAY,"Follow-up delay",1,180,1,"min"),
-      (CONF_FOLLOWUP_PRE_DURATION,"Follow-up pre-alarm duration",1,300,1,"s",NumberMode.SLIDER),
+      (CONF_PRIMARY_PRE_DURATION,"Primary pre-alarm duration",1,30,1,"s",NumberMode.SLIDER),
+      (CONF_FOLLOWUP_DELAY,"Follow-up delay",1,30,1,"min",NumberMode.SLIDER),
+      (CONF_FOLLOWUP_PRE_DURATION,"Follow-up pre-alarm duration",1,30,1,"s",NumberMode.SLIDER),
       (CONF_FOLLOWUP_PRE_VOLUME,"Follow-up pre-alarm volume",0,100,5,"%",NumberMode.SLIDER),
-      (CONF_FOLLOWUP_MAIN_VOLUME,"Follow-up main volume",0,100,5,"%",NumberMode.SLIDER),(CONF_STOP_AFTER,"Stop after",1,180,1,"min")]
+      (CONF_FOLLOWUP_MAIN_VOLUME,"Follow-up main volume",0,100,5,"%",NumberMode.SLIDER),(CONF_STOP_AFTER,"Stop after",1,60,1,"min",NumberMode.SLIDER)]
     async_add_entities(AlarmNumber(c,*spec) for spec in specs)

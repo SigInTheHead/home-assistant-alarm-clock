@@ -46,6 +46,12 @@ PRE_ALARM_TONES = {
     "Soft Chime": "media-source://alarm_clock/soft-chime",
     "Gentle Alarm": "media-source://alarm_clock/gentle-alarm",
 }
+NUMERIC_LIMITS = {
+    CONF_PRIMARY_PRE_DURATION: (1, 30),
+    CONF_FOLLOWUP_PRE_DURATION: (1, 30),
+    CONF_FOLLOWUP_DELAY: (1, 30),
+    CONF_STOP_AFTER: (1, 60),
+}
 
 STATUS_DISABLED = "disabled"
 STATUS_SCHEDULED = "scheduled"

@@ -47,6 +47,11 @@ class MorningAlarmCoordinator:
             value = options[key].get("media_content_id") if isinstance(options[key], dict) else options[key]
             if value not in tone_ids:
                 options[key] = DEFAULT_OPTIONS[key]
+        for key, (minimum, maximum) in NUMERIC_LIMITS.items():
+            try:
+                options[key] = min(maximum, max(minimum, int(options[key])))
+            except (TypeError, ValueError):
+                options[key] = DEFAULT_OPTIONS[key]
         return options
 
     def add_listener(self, listener: Callable[[], None]) -> CALLBACK_TYPE:
@@ -157,6 +162,9 @@ class MorningAlarmCoordinator:
     async def async_set_option(self, key: str, value: Any) -> None:
         """Called by writable entities; also apply schedule conversions."""
         options = self.options
+        if key in NUMERIC_LIMITS:
+            minimum, maximum = NUMERIC_LIMITS[key]
+            value = min(maximum, max(minimum, int(value)))
         if key == CONF_SCHEDULE_MODE and value != options[CONF_SCHEDULE_MODE]:
             if value == SCHEDULE_PER_DAY:
                 times = dict(options[CONF_DAY_TIMES])
