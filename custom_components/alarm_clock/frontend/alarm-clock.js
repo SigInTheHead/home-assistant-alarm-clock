@@ -36,7 +36,7 @@ class AlarmClockCard extends AlarmClockBase {
   static getConfigElement() { return document.createElement("alarm-clock-card-config-editor"); }
   static getStubConfig(hass) {
     const entity = Object.keys(hass.states).find((id) => hass.states[id].attributes?.alarm_clock_entry_id);
-    return { entity, title: "Alarm Clock", icon: "mdi:alarm" };
+    return { entity, title: "Alarm Overview", icon: "mdi:alarm" };
   }
   render() {
     if (!this.shadowRoot || !this._hass || !this.config) return;
@@ -63,7 +63,7 @@ class AlarmClockCard extends AlarmClockBase {
       override: this.config.show_override !== false ? `<div class="row override"><span>One-shot override <span class="sub">${esc((this.value("override_time") || "--:--").slice(0,5))}</span></span><ha-switch data-toggle="override" aria-label="Enable one-shot override"></ha-switch></div>` : "",
     };
     const featureOrder = [...new Set([...(this.config.feature_order || []), "alarm_times", "override", ...(this.config.show_alarm_time_list === true ? ["alarm_time_list"] : [])])].filter((key) => key in features);
-    this.shadowRoot.innerHTML = `${this.styles()}<ha-card class="summary"><h2><ha-icon class="${enabled ? "enabled" : "disabled"}" icon="${esc(this.config.icon || "mdi:alarm")}"></ha-icon><span class="heading"><span>${esc(this.config.title || this.config.name || "Alarm Clock")}</span><span class="sub">${esc(friendlyNext())}</span></span></h2><div class="row"><span>Enabled</span><ha-switch data-toggle="enabled" aria-label="Enable alarm"></ha-switch></div>${featureOrder.map((key) => features[key]).join("")}</ha-card>`;
+    this.shadowRoot.innerHTML = `${this.styles()}<ha-card class="summary"><h2><ha-icon class="${enabled ? "enabled" : "disabled"}" icon="${esc(this.config.icon || "mdi:alarm")}"></ha-icon><span class="heading"><span>${esc(this.config.title || this.config.name || "Alarm Overview")}</span><span class="sub">${esc(friendlyNext())}</span></span></h2><div class="row"><span>Enabled</span><ha-switch data-toggle="enabled" aria-label="Enable alarm"></ha-switch></div>${featureOrder.map((key) => features[key]).join("")}</ha-card>`;
     this.shadowRoot.querySelectorAll("ha-switch[data-toggle]").forEach((el) => {
       el.checked = this.value(el.dataset.toggle) === "on";
       el.onchange = () => this.set(el.dataset.toggle, "switch", el.checked ? "turn_on" : "turn_off", {});
@@ -92,7 +92,7 @@ class AlarmClockCardConfigEditor extends HTMLElement {
       !hasAlarmTimeList ? `<button class="add-feature" data-feature="alarm_time_list">+ Add compact alarm time list</button>` : "",
       !hasOverride ? `<button class="add-feature" data-feature="override">+ Add override time</button>` : "",
     ].join("");
-    this.shadowRoot.innerHTML = `<style>:host{display:block;padding:12px 0}.field{display:block;margin:0 0 16px}.field span{display:block;margin-bottom:6px;color:var(--primary-text-color);font-size:14px}.field small{display:block;margin-top:4px;color:var(--secondary-text-color)}input{box-sizing:border-box;width:100%;padding:10px;border:1px solid var(--divider-color);border-radius:6px;background:var(--card-background-color);color:var(--primary-text-color);font:inherit}ha-entity-picker,ha-icon-picker{display:block;width:100%}.features{border:1px solid var(--divider-color);border-radius:8px;overflow:hidden}.features-toggle,.feature-action{font:inherit;color:var(--primary-text-color);cursor:pointer}.features-toggle{display:flex;width:100%;align-items:center;justify-content:space-between;padding:12px;border:0;background:var(--card-background-color);font-weight:600}.features-body{padding:4px 12px 12px;border-top:1px solid var(--divider-color)}.feature{display:flex;align-items:center;gap:8px;padding:12px 0;cursor:grab}.feature-action{border:0;background:transparent;color:var(--primary-color);padding:6px;margin-left:auto}.drag-handle{color:var(--secondary-text-color);font-size:18px}.add-feature{border:1px solid var(--primary-color);background:transparent;color:var(--primary-color);border-radius:6px;padding:8px 10px;margin:4px 4px 4px 0}</style><label class="field"><span>Entity</span><ha-entity-picker id="entity"></ha-entity-picker><small>Select the root Alarm Clock switch.</small></label><label class="field"><span>Title</span><input data-key="title" value="${esc(this._config.title || this._config.name || "Alarm Clock")}"></label><label class="field"><span>Icon</span><ha-icon-picker id="icon"></ha-icon-picker></label><section class="features"><button class="features-toggle" id="features" aria-expanded="${this._featuresOpen ? "true" : "false"}"><span>Features</span><span>${this._featuresOpen ? "⌃" : "⌄"}</span></button>${this._featuresOpen ? `<div class="features-body">${features}</div>` : ""}</section>`;
+    this.shadowRoot.innerHTML = `<style>:host{display:block;padding:12px 0}.field{display:block;margin:0 0 16px}.field span{display:block;margin-bottom:6px;color:var(--primary-text-color);font-size:14px}.field small{display:block;margin-top:4px;color:var(--secondary-text-color)}input{box-sizing:border-box;width:100%;padding:10px;border:1px solid var(--divider-color);border-radius:6px;background:var(--card-background-color);color:var(--primary-text-color);font:inherit}ha-entity-picker,ha-icon-picker{display:block;width:100%}.features{border:1px solid var(--divider-color);border-radius:8px;overflow:hidden}.features-toggle,.feature-action{font:inherit;color:var(--primary-text-color);cursor:pointer}.features-toggle{display:flex;width:100%;align-items:center;justify-content:space-between;padding:12px;border:0;background:var(--card-background-color);font-weight:600}.features-body{padding:4px 12px 12px;border-top:1px solid var(--divider-color)}.feature{display:flex;align-items:center;gap:8px;padding:12px 0;cursor:grab}.feature-action{border:0;background:transparent;color:var(--primary-color);padding:6px;margin-left:auto}.drag-handle{color:var(--secondary-text-color);font-size:18px}.add-feature{border:1px solid var(--primary-color);background:transparent;color:var(--primary-color);border-radius:6px;padding:8px 10px;margin:4px 4px 4px 0}</style><label class="field"><span>Entity</span><ha-entity-picker id="entity"></ha-entity-picker><small>Select the root Alarm Clock switch.</small></label><label class="field"><span>Title</span><input data-key="title" value="${esc(this._config.title || this._config.name || "Alarm Overview")}"></label><label class="field"><span>Icon</span><ha-icon-picker id="icon"></ha-icon-picker></label><section class="features"><button class="features-toggle" id="features" aria-expanded="${this._featuresOpen ? "true" : "false"}"><span>Features</span><span>${this._featuresOpen ? "⌃" : "⌄"}</span></button>${this._featuresOpen ? `<div class="features-body">${features}</div>` : ""}</section>`;
     const entityPicker = this.shadowRoot.querySelector("#entity");
     entityPicker.hass = this._hass;
     entityPicker.value = this._config.entity || "";
@@ -163,7 +163,7 @@ class AlarmClockEditorCardConfigEditor extends HTMLElement {
   connectedCallback() { this.attachShadow({ mode: "open" }); this.render(); }
   render() {
     if (!this.shadowRoot || !this._config) return;
-    this.shadowRoot.innerHTML = `<style>:host{display:block;padding:12px 0}.field{display:block;margin:0 0 16px}.field span{display:block;margin-bottom:6px;color:var(--primary-text-color);font-size:14px}.field small{display:block;margin-top:4px;color:var(--secondary-text-color)}input,ha-entity-picker,ha-icon-picker{box-sizing:border-box;display:block;width:100%}input{padding:10px;border:1px solid var(--divider-color);border-radius:6px;background:var(--card-background-color);color:var(--primary-text-color);font:inherit}</style><label class="field"><span>Entity</span><ha-entity-picker id="entity"></ha-entity-picker><small>Select the root Alarm Clock switch.</small></label><label class="field"><span>Title</span><input id="title" value="${esc(this._config.title || "")}" placeholder="Alarm Clock"></label><label class="field"><span>Icon</span><ha-icon-picker id="icon"></ha-icon-picker></label>`;
+    this.shadowRoot.innerHTML = `<style>:host{display:block;padding:12px 0}.field{display:block;margin:0 0 16px}.field span{display:block;margin-bottom:6px;color:var(--primary-text-color);font-size:14px}.field small{display:block;margin-top:4px;color:var(--secondary-text-color)}input,ha-entity-picker,ha-icon-picker{box-sizing:border-box;display:block;width:100%}input{padding:10px;border:1px solid var(--divider-color);border-radius:6px;background:var(--card-background-color);color:var(--primary-text-color);font:inherit}</style><label class="field"><span>Entity</span><ha-entity-picker id="entity"></ha-entity-picker><small>Select the root Alarm Clock switch.</small></label><label class="field"><span>Title</span><input id="title" value="${esc(this._config.title || "")}" placeholder="Alarm Schedule"></label><label class="field"><span>Icon</span><ha-icon-picker id="icon"></ha-icon-picker></label>`;
     const entityPicker = this.shadowRoot.querySelector("#entity");
     entityPicker.hass = this._hass;
     entityPicker.value = this._config.entity || "";
@@ -191,7 +191,7 @@ class AlarmClockEditorCard extends AlarmClockBase {
   static getConfigElement() { return document.createElement("alarm-clock-editor-card-config-editor"); }
   static getStubConfig(hass) {
     const entity = Object.keys(hass.states).find((id) => hass.states[id].attributes?.alarm_clock_entry_id);
-    return { entity, icon: "mdi:calendar-clock" };
+    return { entity, title: "Alarm Schedule", icon: "mdi:calendar-clock" };
   }
   render() {
     if (!this.shadowRoot || !this._hass || !this.config) return;
@@ -204,7 +204,7 @@ class AlarmClockEditorCard extends AlarmClockBase {
       return `<div class="box"><div class="time-header"><label>${label}</label>${toggleKey ? `<ha-switch data-toggle="${toggleKey}" aria-label="Enable ${label}"></ha-switch>` : ""}</div><div class="time-controls"><button data-time-adjust="${key}" data-unit="hour" data-direction="1" aria-label="Increase hour">⌃</button><span></span><button data-time-adjust="${key}" data-unit="minute" data-direction="1" aria-label="Increase minutes">⌃</button><strong class="time-value">${esc(hour)}</strong><span class="time-separator">:</span><strong class="time-value">${esc(minute)}</strong><button data-time-adjust="${key}" data-unit="hour" data-direction="-1" aria-label="Decrease hour">⌄</button><span></span><button data-time-adjust="${key}" data-unit="minute" data-direction="-1" aria-label="Decrease minutes">⌄</button></div></div>`;
     };
     const schedule = mode === "compact" ? [["Weekday","weekday_time","weekday_enabled"],["Saturday","saturday_time","saturday_enabled"],["Sunday","sunday_time","sunday_enabled"]].map(([label,key,toggleKey]) => clock(label,key,toggleKey)).join("") : `${days.map((day) => clock(day[0].toUpperCase()+day.slice(1), `per_day_${day}_time`, `${day}_enabled`)).join("")}${clock("Saturday","saturday_time","saturday_enabled")}${clock("Sunday","sunday_time","sunday_enabled")}`;
-    this.shadowRoot.innerHTML = `${this.styles()}<ha-card><h2><ha-icon icon="${esc(this.config.icon || "mdi:calendar-clock")}"></ha-icon> ${esc(this.config.title || "Alarm Clock")}</h2><div class="sub">${esc(this.value("status") || "unknown")}</div>${toggle("Enabled","enabled")}${toggle("One-shot override","override")}<div class="grid">${schedule}${clock("Override time","override_time")}</div></ha-card>`;
+    this.shadowRoot.innerHTML = `${this.styles()}<ha-card><h2><ha-icon icon="${esc(this.config.icon || "mdi:calendar-clock")}"></ha-icon> ${esc(this.config.title || "Alarm Schedule")}</h2><div class="sub">${esc(this.value("status") || "unknown")}</div>${toggle("Enabled","enabled")}${toggle("One-shot override","override")}<div class="grid">${schedule}${clock("Override time","override_time")}</div></ha-card>`;
     this.shadowRoot.querySelectorAll("ha-switch[data-toggle]").forEach((el) => {
       el.checked = this.value(el.dataset.toggle) === "on";
       el.onchange = () => this.set(el.dataset.toggle,"switch",el.checked?"turn_on":"turn_off",{});
@@ -222,7 +222,7 @@ class AlarmClockAdvancedCard extends AlarmClockBase {
   static getConfigElement() { return document.createElement("alarm-clock-editor-card-config-editor"); }
   static getStubConfig(hass) {
     const entity = Object.keys(hass.states).find((id) => hass.states[id].attributes?.alarm_clock_entry_id);
-    return { entity, icon: "mdi:cog" };
+    return { entity, title: "Alarm Playback", icon: "mdi:cog" };
   }
   render() {
     if (!this.shadowRoot || !this._hass || !this.config) return;
@@ -242,7 +242,7 @@ class AlarmClockAdvancedCard extends AlarmClockBase {
     const subtitle = rootName.replace(/^Alarm Clock\s*-\s*/i, "").replace(/\s+Alarm Clock$/i, "");
     const renderId = (this._nativeRowRenderId || 0) + 1;
     this._nativeRowRenderId = renderId;
-    this.shadowRoot.innerHTML = `${this.styles()}<ha-card><h2><ha-icon icon="${esc(this.config.icon || "mdi:cog")}"></ha-icon> ${esc(this.config.title || "Alarm Clock advanced")}</h2><div class="sub">${esc(subtitle)}</div><div class="entities"></div></ha-card>`;
+    this.shadowRoot.innerHTML = `${this.styles()}<ha-card><h2><ha-icon icon="${esc(this.config.icon || "mdi:cog")}"></ha-icon> ${esc(this.config.title || "Alarm Playback")}</h2><div class="sub">${esc(subtitle)}</div><div class="entities"></div></ha-card>`;
     const container = this.shadowRoot.querySelector(".entities");
     const entryId = this._hass.states[this.config.entity]?.attributes?.alarm_clock_entry_id;
     const appendMediaSelector = (stage, key, label) => {
@@ -283,4 +283,4 @@ class AlarmClockAdvancedCard extends AlarmClockBase {
   if (!customElements.get(name)) customElements.define(name, element);
 });
 window.customCards = window.customCards || [];
-window.customCards.push({ type:"alarm-clock-card", name:"Alarm Clock", description:"Alarm Clock summary" }, { type:"alarm-clock-editor-card", name:"Alarm Clock Editor", description:"Alarm Clock schedule controls" }, { type:"alarm-clock-advanced-card", name:"Alarm Clock Advanced", description:"Alarm Clock playback controls" });
+window.customCards.push({ type:"alarm-clock-card", name:"Alarm Overview", description:"Alarm overview and status" }, { type:"alarm-clock-editor-card", name:"Alarm Schedule", description:"Alarm schedule controls" }, { type:"alarm-clock-advanced-card", name:"Alarm Playback", description:"Alarm playback controls" });
