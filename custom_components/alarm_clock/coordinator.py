@@ -227,7 +227,7 @@ class MorningAlarmCoordinator:
         pre_enabled, pre_media = opt[f"{prefix}_pre_enabled"], Media.from_value(opt[f"{prefix}_pre_media"])
         if pre_enabled and pre_media:
             self.status = STATUS_FOLLOWUP_PRE_ALARM if follow_up else STATUS_PRE_ALARM; self._notify()
-            await self._repeat_pre_alarm(token, pre_media, opt[f"{prefix}_pre_volume"], opt[f"{prefix}_pre_duration"], opt[f"{prefix}_pre_repeat"])
+            await self._play_pre_alarm(token, pre_media, opt[f"{prefix}_pre_volume"], opt[f"{prefix}_pre_duration"])
         if token != self._occurrence or late: 
             if late: await self.async_stop(token=token)
             return
@@ -236,12 +236,16 @@ class MorningAlarmCoordinator:
         if media:
             self.status = STATUS_FOLLOWUP_PLAYING if follow_up else STATUS_PLAYING; self._notify()
             await self._play_media(media, volume)
+        elif pre_enabled and pre_media:
+            # A five-minute built-in tone can outlast the chosen pre-alarm
+            # duration when there is no main media to replace it.
+            await self._stop_playback_only(token)
 
-    async def _repeat_pre_alarm(self, token: str, media: Media, volume: int, duration: int, repeat: int) -> None:
-        deadline = dt_util.now() + timedelta(seconds=duration)
-        while token == self._occurrence and dt_util.now() < deadline:
-            await self._play_media(media, volume)
-            await asyncio.sleep(min(repeat, max(0.1, (deadline - dt_util.now()).total_seconds())))
+    async def _play_pre_alarm(self, token: str, media: Media, volume: int, duration: int) -> None:
+        """Play one looping pre-alarm track for its chosen duration."""
+        await self._play_media(media, volume)
+        if token == self._occurrence:
+            await asyncio.sleep(duration)
 
     async def _play_media(self, media: Media, volume: int) -> None:
         entity = self.entry.data[CONF_MEDIA_PLAYER]

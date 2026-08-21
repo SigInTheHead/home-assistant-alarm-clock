@@ -26,6 +26,12 @@ from .const import (
     SCHEDULE_PER_DAY, WEEKDAY_DAYS,
 )
 
+PRE_ALARM_TONES = (
+    ("media-source://alarm_clock/soft-beep", "Soft Beep"),
+    ("media-source://alarm_clock/soft-chime", "Soft Chime"),
+    ("media-source://alarm_clock/gentle-alarm", "Gentle Alarm"),
+)
+
 def _media_default(value: Any) -> Any:
     """Return a media default suitable for the single-output picker.
 
@@ -43,6 +49,12 @@ def _media_default(value: Any) -> Any:
 # alarm has one deliberate output target, configured above, so constrain each
 # picker to audio and let the coordinator always play it on that target.
 MEDIA_SELECTOR = MediaSelector(MediaSelectorConfig(accept=["audio/*"]))
+
+
+def _pre_alarm_default(value: Any) -> str:
+    """Return a built-in tone URI, replacing retired custom pre-alarms."""
+    content_id = value.get("media_content_id") if isinstance(value, Mapping) else value
+    return content_id if content_id in {tone for tone, _ in PRE_ALARM_TONES} else PRE_ALARM_TONES[0][0]
 
 
 def _with_schedule_mode(options: dict[str, Any], mode: str) -> dict[str, Any]:
@@ -91,7 +103,7 @@ class MorningAlarmConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         return MorningAlarmOptionsFlow()
 
 class MorningAlarmOptionsFlow(config_entries.OptionsFlow):
-    """Edit values that need Home Assistant's native media selector."""
+    """Edit alarm settings and main media."""
     async def async_step_init(self, user_input: dict[str, Any] | None = None):
         options = {**DEFAULT_OPTIONS, **self.config_entry.options}
         if user_input is not None:
@@ -105,12 +117,7 @@ class MorningAlarmOptionsFlow(config_entries.OptionsFlow):
             )
             if duplicate:
                 return self.async_show_form(step_id="init", data_schema=self._schema(options), errors={ALARM_NAME: "duplicate_name"})
-            media_keys = (
-                CONF_PRIMARY_PRE_MEDIA,
-                CONF_PRIMARY_MAIN_MEDIA,
-                CONF_FOLLOWUP_PRE_MEDIA,
-                CONF_FOLLOWUP_MAIN_MEDIA,
-            )
+            media_keys = (CONF_PRIMARY_MAIN_MEDIA, CONF_FOLLOWUP_MAIN_MEDIA)
             # Optional selector fields are absent when left untouched. Keep
             # their existing values rather than interpreting an absent picker
             # as a request to erase it when saving another setting.
@@ -120,9 +127,14 @@ class MorningAlarmOptionsFlow(config_entries.OptionsFlow):
                 if isinstance(media := user_input.get(key), Mapping)
                 and media.get("media_content_id")
             }
+            pre_alarm_tones = {
+                key: user_input[key]
+                for key in (CONF_PRIMARY_PRE_MEDIA, CONF_FOLLOWUP_PRE_MEDIA)
+            }
             new_options = {
                 **options,
                 **updated_media,
+                **pre_alarm_tones,
                 CONF_MINUTE_GRANULARITY: user_input[CONF_MINUTE_GRANULARITY],
             }
             new_options = _with_schedule_mode(
@@ -153,8 +165,12 @@ class MorningAlarmOptionsFlow(config_entries.OptionsFlow):
                     for step in (1, 2, 5, 10, 15, 30)
                 ])
             ),
-            vol.Optional(CONF_PRIMARY_PRE_MEDIA, default=_media_default(options[CONF_PRIMARY_PRE_MEDIA])): MEDIA_SELECTOR,
+            vol.Required(CONF_PRIMARY_PRE_MEDIA, default=_pre_alarm_default(options[CONF_PRIMARY_PRE_MEDIA])): SelectSelector(
+                SelectSelectorConfig(options=[{"value": tone, "label": label} for tone, label in PRE_ALARM_TONES])
+            ),
             vol.Optional(CONF_PRIMARY_MAIN_MEDIA, default=_media_default(options[CONF_PRIMARY_MAIN_MEDIA])): MEDIA_SELECTOR,
-            vol.Optional(CONF_FOLLOWUP_PRE_MEDIA, default=_media_default(options[CONF_FOLLOWUP_PRE_MEDIA])): MEDIA_SELECTOR,
+            vol.Required(CONF_FOLLOWUP_PRE_MEDIA, default=_pre_alarm_default(options[CONF_FOLLOWUP_PRE_MEDIA])): SelectSelector(
+                SelectSelectorConfig(options=[{"value": tone, "label": label} for tone, label in PRE_ALARM_TONES])
+            ),
             vol.Optional(CONF_FOLLOWUP_MAIN_MEDIA, default=_media_default(options[CONF_FOLLOWUP_MAIN_MEDIA])): MEDIA_SELECTOR,
         })

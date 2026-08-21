@@ -1,4 +1,4 @@
-"""Built-in, generated short alarm tones exposed through Media Source."""
+"""Built-in, five-minute looping alarm tones exposed through Media Source."""
 from __future__ import annotations
 
 from homeassistant.components.media_player import MediaClass, MediaType
@@ -20,7 +20,9 @@ class MorningAlarmMediaSource(MediaSource):
     async def async_resolve_media(self, item: MediaSourceItem) -> PlayMedia:
         tone = item.identifier
         if tone not in TONES: raise Unresolvable("Unknown Alarm Clock sound")
-        return PlayMedia(f"/api/alarm_clock/media/{tone}.wav", "audio/wav")
+        # Version the resolved URL so players do not retain the former short
+        # tone from the endpoint's cache.
+        return PlayMedia(f"/api/alarm_clock/media/{tone}.wav?v=2", "audio/wav")
     async def async_browse_media(self, item: MediaSourceItem) -> BrowseMediaSource:
         if item.identifier: raise Unresolvable("Alarm Clock sounds have no subfolders")
         return BrowseMediaSource(domain=DOMAIN, identifier="", media_class=MediaClass.DIRECTORY, media_content_type=MediaType.MUSIC, title="Alarm Clock", can_play=False, can_expand=True, children=[

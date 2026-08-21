@@ -16,8 +16,8 @@ async def async_setup_entry(hass, entry, async_add_entities):
     c=hass.data[DOMAIN][entry.entry_id][DATA_COORDINATOR]
     specs=[
       (CONF_PRIMARY_PRE_VOLUME,"Primary pre-alarm volume",0,100,5,"%"),(CONF_PRIMARY_MAIN_VOLUME,"Primary main volume",0,100,5,"%"),
-      (CONF_PRIMARY_PRE_DURATION,"Primary pre-alarm duration",1,600,1,"s"),(CONF_PRIMARY_PRE_REPEAT,"Primary pre-alarm repeat",1,600,1,"s"),
+      (CONF_PRIMARY_PRE_DURATION,"Primary pre-alarm duration",1,300,1,"s"),
       (CONF_FOLLOWUP_DELAY,"Follow-up delay",1,180,1,"min"),(CONF_FOLLOWUP_PRE_VOLUME,"Follow-up pre-alarm volume",0,100,5,"%"),
-      (CONF_FOLLOWUP_PRE_DURATION,"Follow-up pre-alarm duration",1,600,1,"s"),(CONF_FOLLOWUP_PRE_REPEAT,"Follow-up pre-alarm repeat",1,600,1,"s"),
+      (CONF_FOLLOWUP_PRE_DURATION,"Follow-up pre-alarm duration",1,300,1,"s"),
       (CONF_FOLLOWUP_MAIN_VOLUME,"Follow-up main volume",0,100,5,"%"),(CONF_STOP_AFTER,"Stop after",1,180,1,"min")]
     async_add_entities(AlarmNumber(c,*spec) for spec in specs)

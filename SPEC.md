@@ -10,10 +10,10 @@ Each alarm instance should be configurable entirely from the Home Assistant UI a
 
 The integration should also support a two-stage playback sequence for both the initial alarm and the follow-up alarm:
 
-1. **Pre-alarm media** — typically a short beep/chime.
+1. **Pre-alarm tone** — one of the integration's built-in looping beeps/chimes.
 2. **Main media** — typically a radio station, local media file, or other Home Assistant-selectable media.
 
-The primary and follow-up alarm stages must have independent media and volume settings.
+The primary and follow-up alarm stages must have independent tone/media and volume settings.
 
 ## 2. Core Design Principles
 
@@ -24,10 +24,10 @@ The primary and follow-up alarm stages must have independent media and volume se
 - Use standard Home Assistant entity platforms wherever practical.
 - Avoid creating Home Assistant Helpers behind the scenes.
 - Do not depend on global timers or global integration state.
-- Use Home Assistant-native media selection and `media-source://` URIs.
+- Use Home Assistant-native media selection and `media-source://` URIs for main media.
 - Support local media, radio-browser media, and other media supported by `media_player.play_media`.
 - Bundle optional built-in pre-alarm sounds with the integration.
-- Built-in sounds should be short assets, repeated or sequenced by the integration when necessary rather than shipping long multi-minute WAV files.
+- Built-in sounds should be five-minute looping assets. The integration plays one asset for the user-selected pre-alarm duration rather than replaying it in software.
 - Design configuration so future features such as volume ramping can be added without breaking existing entries.
 
 ## 3. Example User Experience
@@ -226,11 +226,11 @@ Example:
 ```text
 Primary Pre-Alarm
   Enabled: Yes
-  Media: Built-in Soft Beep
+  Tone: Soft Beep
   Volume: 25%
 ```
 
-The pre-alarm is intended to be a short audible cue before the main alarm media starts.
+The pre-alarm is a built-in tone before the main alarm media starts.
 
 ### 8.2 Primary Main Media
 
@@ -310,7 +310,7 @@ Follow-Up Pre-Alarm
   Volume: 35%
 ```
 
-It may reuse the same pre-alarm media as the primary alarm, but this must not be mandatory.
+It may reuse the same pre-alarm tone as the primary alarm, but this must not be mandatory.
 
 ## 11. Follow-Up Main Media
 
@@ -453,19 +453,17 @@ Gentle Alarm
 
 These are intended mainly for pre-alarm use.
 
-The bundled files should be short.
+The bundled files should be five-minute looping tracks.
 
 Example:
 
 ```text
-soft-beep.wav     ~2 seconds
-soft-chime.wav    ~2 seconds
-gentle-alarm.wav  ~3 seconds
+soft-beep.wav     5 minutes
+soft-chime.wav    5 minutes
+gentle-alarm.wav  5 minutes
 ```
 
-Do not bundle 2-minute, 3-minute, or 10-minute WAV files.
-
-If a repeating sound is required, repeat/replay the short asset in software.
+Built-in sounds are five-minute looping tracks; no software replay interval is required.
 
 ## 16. Media Source Integration
 
@@ -529,7 +527,7 @@ Sunday time
 
 ```text
 Pre-alarm enabled
-Pre-alarm media
+Pre-alarm tone
 Pre-alarm volume
 Pre-alarm duration
 
@@ -544,7 +542,7 @@ Follow-up enabled
 Follow-up delay
 
 Follow-up pre-alarm enabled
-Follow-up pre-alarm media
+Follow-up pre-alarm tone
 Follow-up pre-alarm volume
 Follow-up pre-alarm duration
 
@@ -736,14 +734,14 @@ The integration extends this to:
 
 ```text
 Primary
-  Pre-alarm media
+  Pre-alarm tone
   Pre-alarm volume
   Main media
   Main volume
 
 Follow-up
   Delay
-  Pre-alarm media
+  Pre-alarm tone
   Pre-alarm volume
   Main media
   Main volume
@@ -842,7 +840,7 @@ At minimum, tests should cover:
 ### Primary Playback
 
 - pre-alarm volume set
-- pre-alarm media played
+- pre-alarm tone played
 - main volume set
 - main media played
 
@@ -878,12 +876,12 @@ V1 is complete when:
 5. Each instance exposes enabled, override, weekday, Saturday, Sunday, and override-time entities.
 6. Weekday/Saturday/Sunday scheduling works.
 7. One-shot override works and automatically resets.
-8. Primary pre-alarm media can be configured.
+8. Primary pre-alarm tone can be configured from the bundled choices.
 9. Primary pre-alarm volume can be configured.
 10. Primary main media can be selected through Home Assistant media selection.
 11. Primary main volume can be configured.
 12. Follow-up delay can be configured.
-13. Follow-up pre-alarm media and volume can be configured independently.
+13. Follow-up pre-alarm tone and volume can be configured independently.
 14. Follow-up main media and volume can be configured independently.
 15. Automatic playback stop works from the original primary alarm start time.
 16. Follow-up does not extend the automatic-stop deadline.
@@ -926,7 +924,7 @@ Create a reusable internal playback engine such as:
 ```python
 async_play_alarm_stage(
     media_player,
-    pre_alarm_media,
+    pre_alarm_tone,
     pre_alarm_volume,
     pre_alarm_duration,
     main_media,
