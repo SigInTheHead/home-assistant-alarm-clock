@@ -253,12 +253,12 @@ class MorningAlarmCoordinator:
         else:
             self.hass.async_create_task(self.async_stop(token=token))
 
-    async def _stop_playback_only(self, token: str) -> None:
+    async def _stop_playback_only(self, token: str, force: bool = False) -> None:
         """Silence the main stage while retaining a late follow-up beep callback."""
         if token != self._occurrence:
             return
         state = self.hass.states.get(self.entry.data[CONF_MEDIA_PLAYER])
-        if self._last_requested_id and state and state.attributes.get("media_content_id") == self._last_requested_id:
+        if force or (self._last_requested_id and state and state.attributes.get("media_content_id") == self._last_requested_id):
             try:
                 await self.hass.services.async_call("media_player", "media_stop", {"entity_id": self.entry.data[CONF_MEDIA_PLAYER]}, blocking=True)
             except Exception as err:
@@ -275,7 +275,7 @@ class MorningAlarmCoordinator:
             STATUS_FOLLOWUP_PLAYING,
         }:
             return
-        await self._stop_playback_only(self._occurrence)
+        await self._stop_playback_only(self._occurrence, force=True)
 
     async def _play_stage(self, token: str, follow_up: bool, late: bool = False) -> None:
         if token != self._occurrence or not self._snapshot: return
