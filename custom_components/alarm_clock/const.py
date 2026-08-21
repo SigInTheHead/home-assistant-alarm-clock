@@ -5,7 +5,7 @@ from datetime import time
 from homeassistant.const import Platform
 
 DOMAIN = "alarm_clock"
-PLATFORMS = [Platform.SWITCH, Platform.TIME, Platform.NUMBER, Platform.SENSOR]
+PLATFORMS = [Platform.SWITCH, Platform.TIME, Platform.NUMBER, Platform.SELECT, Platform.SENSOR]
 DATA_COORDINATOR = "coordinator"
 
 CONF_NAME = "name"
@@ -41,6 +41,11 @@ SCHEDULE_COMPACT = "compact"
 SCHEDULE_PER_DAY = "per_day"
 DAYS = ("monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday")
 WEEKDAY_DAYS = DAYS[:5]
+PRE_ALARM_TONES = {
+    "Soft Beep": "media-source://alarm_clock/soft-beep",
+    "Soft Chime": "media-source://alarm_clock/soft-chime",
+    "Gentle Alarm": "media-source://alarm_clock/gentle-alarm",
+}
 
 STATUS_DISABLED = "disabled"
 STATUS_SCHEDULED = "scheduled"
@@ -58,11 +63,11 @@ DEFAULT_OPTIONS = {
     CONF_WEEKDAY_TIME: "07:00:00", CONF_SATURDAY_TIME: "07:00:00", CONF_SUNDAY_TIME: "07:00:00",
     CONF_DAY_TIMES: {day: "07:00:00" for day in WEEKDAY_DAYS},
     CONF_DAY_ENABLED: {day: True for day in WEEKDAY_DAYS},
-    CONF_PRIMARY_PRE_ENABLED: False, CONF_PRIMARY_PRE_MEDIA: None, CONF_PRIMARY_PRE_VOLUME: 30,
+    CONF_PRIMARY_PRE_ENABLED: False, CONF_PRIMARY_PRE_MEDIA: PRE_ALARM_TONES["Soft Beep"], CONF_PRIMARY_PRE_VOLUME: 30,
     CONF_PRIMARY_PRE_DURATION: 30,
     CONF_PRIMARY_MAIN_MEDIA: None, CONF_PRIMARY_MAIN_VOLUME: 30,
     CONF_FOLLOWUP_ENABLED: False, CONF_FOLLOWUP_DELAY: 10,
-    CONF_FOLLOWUP_PRE_ENABLED: False, CONF_FOLLOWUP_PRE_MEDIA: None, CONF_FOLLOWUP_PRE_VOLUME: 30,
+    CONF_FOLLOWUP_PRE_ENABLED: False, CONF_FOLLOWUP_PRE_MEDIA: PRE_ALARM_TONES["Soft Beep"], CONF_FOLLOWUP_PRE_VOLUME: 30,
     CONF_FOLLOWUP_PRE_DURATION: 30,
     CONF_FOLLOWUP_REUSE_PRIMARY: True, CONF_FOLLOWUP_MAIN_MEDIA: None,
     CONF_FOLLOWUP_MAIN_VOLUME: 30, CONF_STOP_AFTER: 60,

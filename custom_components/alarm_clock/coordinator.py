@@ -39,7 +39,15 @@ class MorningAlarmCoordinator:
 
     @property
     def options(self) -> dict[str, Any]:
-        return {**DEFAULT_OPTIONS, **self.entry.options}
+        options = {**DEFAULT_OPTIONS, **self.entry.options}
+        # Pre-alarms are restricted to the built-in looping tones. This also
+        # safely converts custom media selections saved by earlier versions.
+        tone_ids = set(PRE_ALARM_TONES.values())
+        for key in (CONF_PRIMARY_PRE_MEDIA, CONF_FOLLOWUP_PRE_MEDIA):
+            value = options[key].get("media_content_id") if isinstance(options[key], dict) else options[key]
+            if value not in tone_ids:
+                options[key] = DEFAULT_OPTIONS[key]
+        return options
 
     def add_listener(self, listener: Callable[[], None]) -> CALLBACK_TYPE:
         self._listeners.append(listener)
