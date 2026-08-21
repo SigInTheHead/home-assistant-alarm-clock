@@ -9,5 +9,8 @@
   loading global frontend modules.
 - Lovelace cards are optional enhancements; the integration must not depend on
   them for normal configuration or operation.
+- Prefer Home Assistant's standard frontend components and controls in optional
+  Lovelace cards. Do not recreate native Home Assistant controls in custom HTML
+  unless there is a clear, documented limitation that requires it.
 - Each alarm has one configured output speaker. Media selections must not
   define their own playback speakers.
