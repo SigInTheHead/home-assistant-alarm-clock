@@ -217,7 +217,16 @@ class AlarmClockAdvancedCard extends AlarmClockBase {
   }
   render() {
     if (!this.shadowRoot || !this._hass || !this.config) return;
-    const rows = [["primary_pre_enabled", "Primary pre-alarm"], ["primary_pre_duration", "Run for"], ["primary_pre_volume", "Pre-alarm volume"], ["primary_main_volume", "Main volume"], ["followup_enabled", "Follow-up"], ["followup_delay", "Follow-up delay"], ["followup_pre_enabled", "Follow-up pre-alarm"], ["followup_pre_duration", "Follow-up run for"], ["followup_pre_volume", "Follow-up pre-alarm volume"], ["followup_reuse_primary", "Reuse primary main media"], ["followup_main_volume", "Follow-up main volume"], ["stop_after", "Stop after"]];
+    const enabled = (key) => this.value(key) === "on";
+    const rows = [["primary_pre_enabled", "Primary pre-alarm"]];
+    if (enabled("primary_pre_enabled")) rows.push(["primary_pre_duration", "Run for"], ["primary_pre_volume", "Pre-alarm volume"]);
+    rows.push(["primary_main_volume", "Main volume"], ["followup_enabled", "Follow-up"]);
+    if (enabled("followup_enabled")) {
+      rows.push(["followup_delay", "Follow-up delay"], ["followup_pre_enabled", "Follow-up pre-alarm"]);
+      if (enabled("followup_pre_enabled")) rows.push(["followup_pre_duration", "Follow-up run for"], ["followup_pre_volume", "Follow-up pre-alarm volume"]);
+      rows.push(["followup_reuse_primary", "Reuse primary main media"], ["followup_main_volume", "Follow-up main volume"]);
+    }
+    rows.push(["stop_after", "Stop after"]);
     const rootName = this._hass.states[this.config.entity]?.attributes?.friendly_name || this.config.name || "Alarm Clock";
     const subtitle = rootName.replace(/^Alarm Clock\s*-\s*/i, "").replace(/\s+Alarm Clock$/i, "");
     const entities = rows.map(([key, name]) => {
