@@ -179,6 +179,15 @@ class MorningAlarmCoordinator:
         if key == CONF_ENABLED and not value and self._occurrence:
             await self._cancel_active_stages_keep_stop()
 
+    async def async_set_media(self, stage: str, media: dict[str, Any] | None) -> None:
+        """Store a main-media selector value from the optional dashboard card."""
+        key = MEDIA_OPTION_KEYS[stage]
+        if media is not None and not media.get("media_content_id"):
+            return
+        self.hass.config_entries.async_update_entry(
+            self.entry, options={**self.options, key: media}
+        )
+
     async def _cancel_active_stages_keep_stop(self) -> None:
         if self._stage_task: self._stage_task.cancel()
         if self._follow_cancel: self._follow_cancel(); self._follow_cancel = None

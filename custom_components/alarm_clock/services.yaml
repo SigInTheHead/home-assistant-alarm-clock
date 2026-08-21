@@ -22,3 +22,23 @@ stop:
       required: true
       selector:
         text:
+set_media:
+  name: Set main media
+  description: Set primary or follow-up main media from an Alarm Clock card.
+  fields:
+    entry_id:
+      required: true
+      selector:
+        text:
+    stage:
+      required: true
+      selector:
+        select:
+          options:
+            - primary_main
+            - followup_main
+    media:
+      selector:
+        media:
+          media_content_types:
+            - music

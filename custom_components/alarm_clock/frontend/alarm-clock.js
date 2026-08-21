@@ -29,7 +29,7 @@ class AlarmClockBase extends HTMLElement {
     return monday && monday.state !== "unavailable" ? "per_day" : "compact";
   }
   async set(key, domain, service, data) { const item = this.find(key); if (item) await this._hass.callService(domain, service, { entity_id: item.entity_id, ...data }); }
-  styles() { return `<style>:host{display:block}ha-card{padding:16px}h2{display:flex;align-items:center;gap:8px;margin:0}.heading{display:flex;flex-direction:column;gap:2px}.heading .sub{font-weight:normal}h2 ha-icon{--mdc-icon-size:28px}h2 ha-icon.enabled{color:var(--primary-color)!important}h2 ha-icon.disabled{color:var(--disabled-text-color,#9e9e9e)!important}.summary{padding:12px}.summary h2{font-size:16px;line-height:1.2}.summary h2 ha-icon{--mdc-icon-size:24px}.summary .sub{font-size:12px}.sub,label{color:var(--secondary-text-color);font-size:13px}.card-header{font-size:20px;font-weight:500;padding-bottom:8px}.row{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px 0;border-top:1px solid var(--divider-color)}.override{border-top:0}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(125px,1fr));gap:8px;margin:12px 0}.box{background:var(--secondary-background-color);border-radius:8px;padding:9px}.time-header{display:flex;align-items:center;justify-content:space-between;gap:8px}input,select,button{font:inherit;padding:6px;border-radius:6px;background:var(--secondary-background-color);color:var(--primary-text-color);border:1px solid var(--divider-color)}.time-controls{display:grid;grid-template-columns:1fr 14px 1fr;justify-items:center;align-items:center;margin-top:6px}.time-controls button{width:100%;padding:2px;border:0;background:transparent;font-size:18px;line-height:1;cursor:pointer}.time-value{font-size:20px;font-weight:600;padding:5px 0}.time-separator{font-size:18px}.hidden{display:none}</style>`; }
+  styles() { return `<style>:host{display:block}ha-card{padding:16px}h2{display:flex;align-items:center;gap:8px;margin:0}.heading{display:flex;flex-direction:column;gap:2px}.heading .sub{font-weight:normal}h2 ha-icon{--mdc-icon-size:28px}h2 ha-icon.enabled{color:var(--primary-color)!important}h2 ha-icon.disabled{color:var(--disabled-text-color,#9e9e9e)!important}.summary{padding:12px}.summary h2{font-size:16px;line-height:1.2}.summary h2 ha-icon{--mdc-icon-size:24px}.summary .sub{font-size:12px}.sub,label{color:var(--secondary-text-color);font-size:13px}.card-header{font-size:20px;font-weight:500;padding-bottom:8px}.row,.media-selector{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px 0;border-top:1px solid var(--divider-color)}.media-selector ha-selector{flex:1;max-width:70%}.override{border-top:0}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(125px,1fr));gap:8px;margin:12px 0}.box{background:var(--secondary-background-color);border-radius:8px;padding:9px}.time-header{display:flex;align-items:center;justify-content:space-between;gap:8px}input,select,button{font:inherit;padding:6px;border-radius:6px;background:var(--secondary-background-color);color:var(--primary-text-color);border:1px solid var(--divider-color)}.time-controls{display:grid;grid-template-columns:1fr 14px 1fr;justify-items:center;align-items:center;margin-top:6px}.time-controls button{width:100%;padding:2px;border:0;background:transparent;font-size:18px;line-height:1;cursor:pointer}.time-value{font-size:20px;font-weight:600;padding:5px 0}.time-separator{font-size:18px}.hidden{display:none}</style>`; }
 }
 
 class AlarmClockCard extends AlarmClockBase {
@@ -219,11 +219,11 @@ class AlarmClockAdvancedCard extends AlarmClockBase {
     if (!this.shadowRoot || !this._hass || !this.config) return;
     const enabled = (key) => this.value(key) === "on";
     const rows = [["primary_pre_enabled", "Primary pre-alarm"]];
-    if (enabled("primary_pre_enabled")) rows.push(["primary_pre_duration", "Run for"], ["primary_pre_volume", "Pre-alarm volume"]);
+    if (enabled("primary_pre_enabled")) rows.push(["primary_pre_media", "Pre-alarm tone"], ["primary_pre_duration", "Run for"], ["primary_pre_volume", "Pre-alarm volume"]);
     rows.push(["primary_main_volume", "Main volume"], ["followup_enabled", "Follow-up"]);
     if (enabled("followup_enabled")) {
       rows.push(["followup_delay", "Follow-up delay"], ["followup_pre_enabled", "Follow-up pre-alarm"]);
-      if (enabled("followup_pre_enabled")) rows.push(["followup_pre_duration", "Follow-up run for"], ["followup_pre_volume", "Follow-up pre-alarm volume"]);
+      if (enabled("followup_pre_enabled")) rows.push(["followup_pre_media", "Follow-up pre-alarm tone"], ["followup_pre_duration", "Follow-up run for"], ["followup_pre_volume", "Follow-up pre-alarm volume"]);
       rows.push(["followup_reuse_primary", "Reuse primary main media"], ["followup_main_volume", "Follow-up main volume"]);
     }
     rows.push(["stop_after", "Stop after"]);
@@ -233,10 +233,27 @@ class AlarmClockAdvancedCard extends AlarmClockBase {
       const entity = this.find(key)?.entity_id;
       return entity ? { entity, name } : null;
     }).filter(Boolean);
+    const mediaSelectors = [["primary_main", "primary_main_media", "Primary main media"]];
+    if (enabled("followup_enabled") && !enabled("followup_reuse_primary")) mediaSelectors.push(["followup_main", "followup_main_media", "Follow-up main media"]);
     const renderId = (this._nativeRowRenderId || 0) + 1;
     this._nativeRowRenderId = renderId;
-    this.shadowRoot.innerHTML = `${this.styles()}<ha-card><h2><ha-icon icon="${esc(this.config.icon || "mdi:cog")}"></ha-icon> ${esc(this.config.title || "Alarm Clock advanced")}</h2><div class="sub">${esc(subtitle)}</div><div class="entities"></div></ha-card>`;
+    this.shadowRoot.innerHTML = `${this.styles()}<ha-card><h2><ha-icon icon="${esc(this.config.icon || "mdi:cog")}"></ha-icon> ${esc(this.config.title || "Alarm Clock advanced")}</h2><div class="sub">${esc(subtitle)}</div><div class="media-selectors"></div><div class="entities"></div></ha-card>`;
     const container = this.shadowRoot.querySelector(".entities");
+    const mediaContainer = this.shadowRoot.querySelector(".media-selectors");
+    const entryId = this._hass.states[this.config.entity]?.attributes?.alarm_clock_entry_id;
+    mediaSelectors.forEach(([stage, key, label]) => {
+      const wrapper = document.createElement("div");
+      wrapper.className = "media-selector";
+      const heading = document.createElement("label");
+      heading.textContent = label;
+      const selector = document.createElement("ha-selector");
+      selector.hass = this._hass;
+      selector.selector = { media: { accept: ["audio/*"] } };
+      selector.value = this.value(key) || null;
+      selector.addEventListener("value-changed", (event) => this._hass.callService("alarm_clock", "set_media", { entry_id: entryId, stage, media: event.detail.value || null }));
+      wrapper.append(heading, selector);
+      mediaContainer.append(wrapper);
+    });
     window.loadCardHelpers().then(async (helpers) => {
       if (renderId !== this._nativeRowRenderId) return;
       for (const config of entities) {

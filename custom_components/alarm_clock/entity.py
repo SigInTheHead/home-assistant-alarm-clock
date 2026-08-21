@@ -8,6 +8,8 @@ from .const import (
     CONF_DAY_ENABLED,
     CONF_DAY_TIMES,
     CONF_MINUTE_GRANULARITY,
+    CONF_PRIMARY_MAIN_MEDIA,
+    CONF_FOLLOWUP_MAIN_MEDIA,
     CONF_NAME,
     CONF_OVERRIDE_TIME,
     CONF_SATURDAY_TIME,
@@ -48,6 +50,8 @@ class MorningAlarmEntity(Entity):
             CONF_SATURDAY_TIME: self.coordinator.options[CONF_SATURDAY_TIME],
             CONF_SUNDAY_TIME: self.coordinator.options[CONF_SUNDAY_TIME],
             CONF_OVERRIDE_TIME: self.coordinator.options[CONF_OVERRIDE_TIME],
+            CONF_PRIMARY_MAIN_MEDIA: self.coordinator.options[CONF_PRIMARY_MAIN_MEDIA],
+            CONF_FOLLOWUP_MAIN_MEDIA: self.coordinator.options[CONF_FOLLOWUP_MAIN_MEDIA],
         }
 
     async def async_added_to_hass(self) -> None:

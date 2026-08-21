@@ -8,7 +8,7 @@ from homeassistant.components.http import StaticPathConfig
 from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.helpers import config_validation as cv
 
-from .const import DATA_COORDINATOR, DOMAIN, PLATFORMS, SERVICE_STOP, SERVICE_TRIGGER, SERVICE_TRIGGER_FOLLOW_UP
+from .const import DATA_COORDINATOR, DOMAIN, MEDIA_OPTION_KEYS, PLATFORMS, SERVICE_SET_MEDIA, SERVICE_STOP, SERVICE_TRIGGER, SERVICE_TRIGGER_FOLLOW_UP
 from .coordinator import MorningAlarmCoordinator
 from .http import MorningAlarmToneView
 
@@ -29,12 +29,20 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
                 await coordinator.async_trigger(manual=True)
             elif call.service == SERVICE_TRIGGER_FOLLOW_UP:
                 await coordinator.async_trigger_follow_up(standalone=True)
+            elif call.service == SERVICE_SET_MEDIA:
+                await coordinator.async_set_media(call.data["stage"], call.data.get("media"))
             else:
                 await coordinator.async_stop(manual=True)
 
     schema = vol.Schema({vol.Required("entry_id"): vol.All(cv.ensure_list, [cv.string])})
     for service in (SERVICE_TRIGGER, SERVICE_TRIGGER_FOLLOW_UP, SERVICE_STOP):
         hass.services.async_register(DOMAIN, service, _service, schema=schema)
+    media_schema = vol.Schema({
+        vol.Required("entry_id"): vol.All(cv.ensure_list, [cv.string]),
+        vol.Required("stage"): vol.In(MEDIA_OPTION_KEYS),
+        vol.Optional("media"): vol.Any(None, dict),
+    })
+    hass.services.async_register(DOMAIN, SERVICE_SET_MEDIA, _service, schema=media_schema)
     return True
 
 async def async_setup_entry(hass: HomeAssistant, entry: MorningAlarmConfigEntry) -> bool:

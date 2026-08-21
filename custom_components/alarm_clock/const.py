@@ -82,3 +82,8 @@ DEFAULT_OPTIONS = {
 SERVICE_TRIGGER = "trigger"
 SERVICE_TRIGGER_FOLLOW_UP = "trigger_follow_up"
 SERVICE_STOP = "stop"
+SERVICE_SET_MEDIA = "set_media"
+MEDIA_OPTION_KEYS = {
+    "primary_main": CONF_PRIMARY_MAIN_MEDIA,
+    "followup_main": CONF_FOLLOWUP_MAIN_MEDIA,
+}
