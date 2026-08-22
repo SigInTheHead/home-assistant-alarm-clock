@@ -1,6 +1,39 @@
 /* Optional Alarm Clock Lovelace cards. No build step or external dependency. */
 const esc = (v) => String(v ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 
+const SUMMARY_FEATURES = {
+  alarm_times: { label: "Alarm time cards", icon: "mdi:calendar-clock" },
+  alarm_time_list: { label: "Compact alarm time list", icon: "mdi:format-list-bulleted" },
+  override: { label: "Override time", icon: "mdi:calendar-sync" },
+  snooze: { label: "Snooze", icon: "mdi:alarm-snooze", stop_label: "Stop", stop_icon: "mdi:stop-circle" },
+  skip: { label: "Skip", icon: "mdi:skip-next" },
+  stop_alarm: { label: "Stop alarm", icon: "mdi:stop-circle" },
+};
+
+const featureType = (type) => type === "kill_alarm" ? "stop_alarm" : type === "stop_playback" ? "snooze" : type;
+const normaliseFeature = (feature) => {
+  const type = featureType(feature?.type);
+  return SUMMARY_FEATURES[type] ? { ...SUMMARY_FEATURES[type], ...feature, type } : null;
+};
+const legacySummaryFeatures = (config) => {
+  const visible = {
+    alarm_times: config.show_alarm_times !== false,
+    alarm_time_list: config.show_alarm_time_list === true,
+    snooze: config.show_snooze === true || config.show_stop_playback === true,
+    skip: config.show_skip !== false,
+    stop_alarm: config.show_kill_alarm === true,
+    override: config.show_override !== false,
+  };
+  const order = [...new Set([
+    ...(config.feature_order || []).map(featureType),
+    "alarm_times", "override", "alarm_time_list", "snooze", "skip", "stop_alarm",
+  ])];
+  return order.filter((type) => visible[type]).map((type) => normaliseFeature({ type }));
+};
+const summaryFeatures = (config) => Array.isArray(config.features)
+  ? config.features.map(normaliseFeature).filter(Boolean)
+  : legacySummaryFeatures(config);
+
 class AlarmClockBase extends HTMLElement {
   setConfig(config) { if (!config.entity) throw new Error("Set entity to the root Alarm Clock switch"); this.config = config; this.render(); }
   set hass(hass) {
@@ -33,7 +66,7 @@ class AlarmClockBase extends HTMLElement {
     return monday && monday.state !== "unavailable" ? "per_day" : "compact";
   }
   async set(key, domain, service, data) { const item = this.find(key); if (item) await this._hass.callService(domain, service, { entity_id: item.entity_id, ...data }); }
-  styles() { return `<style>:host{display:block}ha-card{padding:0}.card-header{display:flex;align-items:center;gap:8px;padding:16px 16px 0;font-size:20px;font-weight:500;line-height:1.4}.card-header ha-icon{--mdc-icon-size:24px}.card-content{padding:0 16px 16px}.sub,label{color:var(--secondary-text-color);font-size:13px}.card-content>.sub{margin-top:2px}.row,.media-selector{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px 0}.media-selector ha-selector{flex:1;max-width:70%}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(125px,1fr));gap:8px;margin:12px 0}.box{background:var(--secondary-background-color);border-radius:8px;padding:9px}.schedule-list{margin:4px 0}.schedule-list .row{padding:1px 0;font-size:13px}.schedule-list .row+.row{border-top:1px solid color-mix(in srgb,var(--divider-color) 45%,transparent)}.schedule-list b{font-variant-numeric:tabular-nums}.config-warning{margin-top:8px;color:var(--error-color);font-size:13px}.alarm-action{width:100%;margin-top:8px;padding:10px;background:var(--primary-color);border:0;color:var(--text-primary-color,#fff);cursor:pointer}.alarm-action.stop-action{background:var(--error-color)}.alarm-action:disabled{background:var(--disabled-color,#7f7f7f);color:var(--disabled-text-color,#aaa);cursor:not-allowed}.time-header{display:flex;align-items:center;justify-content:space-between;gap:8px}input,select,button{font:inherit;padding:6px;border-radius:6px;background:var(--secondary-background-color);color:var(--primary-text-color);border:1px solid var(--divider-color)}button.alarm-action{border:0}.time-controls{display:grid;grid-template-columns:1fr 14px 1fr;justify-items:center;align-items:center;margin-top:6px}.time-controls button{width:100%;padding:2px;border:0;background:transparent;font-size:18px;line-height:1;cursor:pointer}.time-value{font-size:20px;font-weight:600;padding:5px 0}.time-separator{font-size:18px}.hidden{display:none}</style>`; }
+  styles() { return `<style>:host{display:block}ha-card{padding:0}.card-header{display:flex;align-items:center;gap:8px;padding:16px 16px 0;font-size:20px;font-weight:500;line-height:1.4}.card-header ha-icon{--mdc-icon-size:24px}.card-content{padding:0 16px 16px}.sub,label{color:var(--secondary-text-color);font-size:13px}.card-content>.sub{margin-top:2px}.row,.media-selector{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px 0}.media-selector ha-selector{flex:1;max-width:70%}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(125px,1fr));gap:8px;margin:12px 0}.box{background:var(--secondary-background-color);border-radius:8px;padding:9px}.schedule-list{margin:4px 0}.schedule-list .row{padding:1px 0;font-size:13px}.schedule-list .row+.row{border-top:1px solid color-mix(in srgb,var(--divider-color) 45%,transparent)}.schedule-list b{font-variant-numeric:tabular-nums}.config-warning{margin-top:8px;color:var(--error-color);font-size:13px}.alarm-action{width:100%;margin-top:8px;padding:10px;background:var(--primary-color);border:0;color:var(--text-primary-color,#fff);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px}.alarm-action ha-icon{--mdc-icon-size:20px}.alarm-action.stop-action{background:var(--error-color)}.alarm-action:disabled{background:var(--disabled-color,#7f7f7f);color:var(--disabled-text-color,#aaa);cursor:not-allowed}.time-header{display:flex;align-items:center;justify-content:space-between;gap:8px}input,select,button{font:inherit;padding:6px;border-radius:6px;background:var(--secondary-background-color);color:var(--primary-text-color);border:1px solid var(--divider-color)}button.alarm-action{border:0}.time-controls{display:grid;grid-template-columns:1fr 14px 1fr;justify-items:center;align-items:center;margin-top:6px}.time-controls button{width:100%;padding:2px;border:0;background:transparent;font-size:18px;line-height:1;cursor:pointer}.time-value{font-size:20px;font-weight:600;padding:5px 0}.time-separator{font-size:18px}.hidden{display:none}</style>`; }
 }
 
 class AlarmClockCard extends AlarmClockBase {
@@ -59,8 +92,6 @@ class AlarmClockCard extends AlarmClockBase {
     const stopDeadline = this.value("stop_deadline");
     const snoozeWouldStop = this.value("snooze_would_stop") === true || (stopDeadline && new Date(stopDeadline).getTime() - Date.now() <= snoozeDuration * 60000);
     const snoozing = status === "snoozed";
-    const hasSnooze = this.config.show_snooze === true || this.config.show_stop_playback === true;
-    const hasSkip = this.config.show_skip !== false;
     const canSkip = this.value("can_skip") === true;
     const friendlyNext = () => {
       if (!enabled) return "Next: alarm is off";
@@ -73,16 +104,20 @@ class AlarmClockCard extends AlarmClockBase {
       if (day === tomorrow.toDateString()) return `Next: tomorrow at ${at}`;
       return `Next: ${date.toLocaleDateString([], { weekday: "long", day: "numeric", month: "short" })} at ${at}`;
     };
-    const features = {
-      alarm_times: this.config.show_alarm_times !== false ? `<div class="grid">${schedule.map(([label,key]) => `<div class="box"><label>${label}</label><br><b>${esc((this.value(key) || this._hass.states[this.config.entity]?.attributes?.day_times?.[key.replace("per_day_", "").replace("_time", "")] || "--:--").slice(0,5))}</b></div>`).join("")}</div>` : "",
-      alarm_time_list: this.config.show_alarm_time_list === true ? `<div class="schedule-list">${schedule.map(([label,key]) => `<div class="row"><span>${label}</span><b>${esc((this.value(key) || this._hass.states[this.config.entity]?.attributes?.day_times?.[key.replace("per_day_", "").replace("_time", "")] || "--:--").slice(0,5))}</b></div>`).join("")}</div>` : "",
-      snooze: hasSnooze ? `<button class="alarm-action${snoozeWouldStop ? " stop-action" : ""}" data-action="${snoozeWouldStop ? "stop" : "snooze"}" ${playbackActive ? "" : "disabled"}>${snoozing ? "Snoozing" : snoozeWouldStop ? "Stop" : "Snooze"}</button>` : "",
-      skip: hasSkip ? `<button class="alarm-action" data-action="skip" ${canSkip ? "" : "disabled"}>Skip</button>` : "",
-      kill_alarm: this.config.show_kill_alarm === true ? `<button class="alarm-action stop-action" data-action="stop" ${alarmActive ? "" : "disabled"}>Stop alarm</button>` : "",
-      override: this.config.show_override !== false ? `<div class="row override"><span>One-shot override <span class="sub">${esc((this.value("override_time") || "--:--").slice(0,5))}</span></span><ha-switch data-toggle="override" aria-label="Enable one-shot override"></ha-switch></div>` : "",
+    const actionButton = (feature, action, disabled, stopAction = false, label = feature.label) => `<button class="alarm-action${stopAction ? " stop-action" : ""}" data-action="${action}" ${disabled ? "disabled" : ""}><ha-icon icon="${esc(feature.icon)}"></ha-icon><span>${esc(label)}</span></button>`;
+    const renderFeature = (feature) => {
+      if (feature.type === "alarm_times") return `<div class="grid">${schedule.map(([label,key]) => `<div class="box"><label>${label}</label><br><b>${esc((this.value(key) || this._hass.states[this.config.entity]?.attributes?.day_times?.[key.replace("per_day_", "").replace("_time", "")] || "--:--").slice(0,5))}</b></div>`).join("")}</div>`;
+      if (feature.type === "alarm_time_list") return `<div class="schedule-list">${schedule.map(([label,key]) => `<div class="row"><span>${label}</span><b>${esc((this.value(key) || this._hass.states[this.config.entity]?.attributes?.day_times?.[key.replace("per_day_", "").replace("_time", "")] || "--:--").slice(0,5))}</b></div>`).join("")}</div>`;
+      if (feature.type === "snooze") {
+        const activeFeature = snoozeWouldStop ? { ...feature, label: feature.stop_label, icon: feature.stop_icon } : feature;
+        return actionButton(activeFeature, snoozeWouldStop ? "stop" : "snooze", !playbackActive, snoozeWouldStop, snoozing ? "Snoozing" : activeFeature.label);
+      }
+      if (feature.type === "skip") return actionButton(feature, "skip", !canSkip);
+      if (feature.type === "stop_alarm") return actionButton(feature, "stop", !alarmActive, true);
+      if (feature.type === "override") return `<div class="row override"><span>One-shot override <span class="sub">${esc((this.value("override_time") || "--:--").slice(0,5))}</span></span><ha-switch data-toggle="override" aria-label="Enable one-shot override"></ha-switch></div>`;
+      return "";
     };
-    const featureOrder = [...new Set([...(this.config.feature_order || []).map((key) => key === "stop_playback" ? "snooze" : key), "alarm_times", "override", ...(this.config.show_alarm_time_list === true ? ["alarm_time_list"] : []), ...(hasSnooze ? ["snooze"] : []), ...(hasSkip ? ["skip"] : []), ...(this.config.show_kill_alarm === true ? ["kill_alarm"] : [])])].filter((key) => key in features);
-    this.shadowRoot.innerHTML = `${this.styles()}<ha-card class="summary"><div class="card-header"><ha-icon icon="${esc(this.config.icon || "mdi:alarm")}"></ha-icon><span>${esc(this.config.title || this.config.name || "Alarm Overview")}</span></div><div class="card-content"><div class="sub">${esc(friendlyNext())}</div>${configurationError ? `<div class="config-warning">${esc(configurationError)}</div>` : ""}<div class="row"><span>Enabled</span><ha-switch data-toggle="enabled" aria-label="Enable alarm"></ha-switch></div>${featureOrder.map((key) => features[key]).join("")}</div></ha-card>`;
+    this.shadowRoot.innerHTML = `${this.styles()}<ha-card class="summary"><div class="card-header"><ha-icon icon="${esc(this.config.icon || "mdi:alarm")}"></ha-icon><span>${esc(this.config.title || this.config.name || "Alarm Overview")}</span></div><div class="card-content"><div class="sub">${esc(friendlyNext())}</div>${configurationError ? `<div class="config-warning">${esc(configurationError)}</div>` : ""}<div class="row"><span>Enabled</span><ha-switch data-toggle="enabled" aria-label="Enable alarm"></ha-switch></div>${summaryFeatures(this.config).map(renderFeature).join("")}</div></ha-card>`;
     this.shadowRoot.querySelectorAll("ha-switch[data-toggle]").forEach((el) => {
       el.checked = this.value(el.dataset.toggle) === "on";
       if (el.dataset.toggle === "enabled") el.disabled = Boolean(configurationError) && !el.checked;
@@ -100,84 +135,35 @@ class AlarmClockCard extends AlarmClockBase {
 }
 
 class AlarmClockCardConfigEditor extends HTMLElement {
-  setConfig(config) {
-    const firstConfig = !this._config;
-    this._config = { ...config };
-    if (firstConfig && this.isConnected) this.render();
-  }
+  setConfig(config) { const firstConfig = !this._config; this._config = { ...config }; if (firstConfig && this.isConnected) this.render(); }
   set hass(hass) { this._hass = hass; }
   connectedCallback() { this.attachShadow({ mode: "open" }); this.render(); }
+  _update(config) { this._config = config; this.dispatchEvent(new CustomEvent("config-changed", { detail: { config }, bubbles: true, composed: true })); }
+  _updateFeatures(features) {
+    const config = { ...this._config, features };
+    ["feature_order", "show_alarm_times", "show_alarm_time_list", "show_snooze", "show_stop_playback", "show_skip", "show_kill_alarm", "show_override"].forEach((key) => delete config[key]);
+    this._update(config);
+  }
   render() {
     if (!this.shadowRoot || !this._config) return;
-    const hasAlarmTimes = this._config.show_alarm_times !== false;
-    const hasAlarmTimeList = this._config.show_alarm_time_list === true;
-    const hasSnooze = this._config.show_snooze === true || this._config.show_stop_playback === true;
-    const hasSkip = this._config.show_skip !== false;
-    const hasKillAlarm = this._config.show_kill_alarm === true;
-    const hasOverride = this._config.show_override !== false;
-    const visible = { alarm_times: hasAlarmTimes, alarm_time_list: hasAlarmTimeList, snooze: hasSnooze, skip: hasSkip, kill_alarm: hasKillAlarm, override: hasOverride };
-    const featureOrder = [...new Set([...(this._config.feature_order || []).map((key) => key === "stop_playback" ? "snooze" : key), "alarm_times", "override", ...(hasAlarmTimeList ? ["alarm_time_list"] : []), ...(hasSnooze ? ["snooze"] : []), ...(hasSkip ? ["skip"] : []), ...(hasKillAlarm ? ["kill_alarm"] : [])])].filter((key) => key in visible);
-    const featureLabels = { alarm_times: "Alarm time cards", alarm_time_list: "Compact alarm time list", snooze: "Snooze", skip: "Skip", kill_alarm: "Stop alarm", override: "Override time" };
-    const features = [
-      ...featureOrder.filter((key) => visible[key]).map((key) => `<div class="feature" draggable="true" data-feature="${key}"><span class="drag-handle" title="Drag to reorder">⠿</span><span>${featureLabels[key]}</span><button class="feature-action" data-feature="${key}">Remove</button></div>`),
-      !hasAlarmTimes ? `<button class="add-feature" data-feature="alarm_times">+ Add alarm time cards</button>` : "",
-      !hasAlarmTimeList ? `<button class="add-feature" data-feature="alarm_time_list">+ Add compact alarm time list</button>` : "",
-      !hasSnooze ? `<button class="add-feature" data-feature="snooze">+ Add snooze</button>` : "",
-      !hasSkip ? `<button class="add-feature" data-feature="skip">+ Add skip</button>` : "",
-      !hasKillAlarm ? `<button class="add-feature" data-feature="kill_alarm">+ Add stop alarm</button>` : "",
-      !hasOverride ? `<button class="add-feature" data-feature="override">+ Add override time</button>` : "",
-    ].join("");
-    this.shadowRoot.innerHTML = `<style>:host{display:block;padding:12px 0}.field{display:block;margin:0 0 16px}.field span{display:block;margin-bottom:6px;color:var(--primary-text-color);font-size:14px}.field small{display:block;margin-top:4px;color:var(--secondary-text-color)}input{box-sizing:border-box;width:100%;padding:10px;border:1px solid var(--divider-color);border-radius:6px;background:var(--card-background-color);color:var(--primary-text-color);font:inherit}ha-entity-picker,ha-icon-picker{display:block;width:100%}.features{border:1px solid var(--divider-color);border-radius:8px;overflow:hidden}.features-toggle,.feature-action{font:inherit;color:var(--primary-text-color);cursor:pointer}.features-toggle{display:flex;width:100%;align-items:center;justify-content:space-between;padding:12px;border:0;background:var(--card-background-color);font-weight:600}.features-body{padding:4px 12px 12px;border-top:1px solid var(--divider-color)}.feature{display:flex;align-items:center;gap:8px;padding:12px 0;cursor:grab}.feature-action{border:0;background:transparent;color:var(--primary-color);padding:6px;margin-left:auto}.drag-handle{color:var(--secondary-text-color);font-size:18px}.add-feature{border:1px solid var(--primary-color);background:transparent;color:var(--primary-color);border-radius:6px;padding:8px 10px;margin:4px 4px 4px 0}</style><label class="field"><span>Entity</span><ha-entity-picker id="entity"></ha-entity-picker><small>Select the root Alarm Clock switch.</small></label><label class="field"><span>Title</span><input data-key="title" value="${esc(this._config.title || this._config.name || "Alarm Overview")}"></label><label class="field"><span>Icon</span><ha-icon-picker id="icon"></ha-icon-picker></label><section class="features"><button class="features-toggle" id="features" aria-expanded="${this._featuresOpen ? "true" : "false"}"><span>Features</span><span>${this._featuresOpen ? "⌃" : "⌄"}</span></button>${this._featuresOpen ? `<div class="features-body">${features}</div>` : ""}</section>`;
-    const entityPicker = this.shadowRoot.querySelector("#entity");
-    entityPicker.hass = this._hass;
-    entityPicker.value = this._config.entity || "";
-    entityPicker.includeDomains = ["switch"];
-    entityPicker.addEventListener("value-changed", (event) => {
-      const config = { ...this._config, entity: event.detail.value };
-      this._config = config;
-      this.dispatchEvent(new CustomEvent("config-changed", { detail: { config }, bubbles: true, composed: true }));
-    });
-    const iconPicker = this.shadowRoot.querySelector("#icon");
-    iconPicker.hass = this._hass;
-    iconPicker.value = this._config.icon || "mdi:alarm";
-    iconPicker.addEventListener("value-changed", (event) => {
-      const config = { ...this._config, icon: event.detail.value || "mdi:alarm" };
-      this._config = config;
-      this.dispatchEvent(new CustomEvent("config-changed", { detail: { config }, bubbles: true, composed: true }));
-    });
-    this.shadowRoot.querySelectorAll("[data-key]").forEach((input) => input.onchange = () => {
-      const key = input.dataset.key, value = input.value.trim(), config = { ...this._config };
-      if (value) config[key] = value; else delete config[key];
-      this._config = config;
-      this.dispatchEvent(new CustomEvent("config-changed", { detail: { config }, bubbles: true, composed: true }));
-    });
+    const features = summaryFeatures(this._config);
+    const available = Object.keys(SUMMARY_FEATURES).filter((type) => !features.some((feature) => feature.type === type));
+    const actionSettings = (feature) => ["snooze", "skip", "stop_alarm"].includes(feature.type) ? `<ha-expansion-panel class="feature-settings" ${this._editingFeature === feature.type ? "expanded" : ""}><span slot="header">${esc(feature.label)} settings</span><label>Label<input data-feature-field="label" data-feature="${feature.type}" value="${esc(feature.label)}"></label><label>Icon<ha-icon-picker data-feature-icon="icon" data-feature="${feature.type}"></ha-icon-picker></label>${feature.type === "snooze" ? `<label>Stop label<input data-feature-field="stop_label" data-feature="snooze" value="${esc(feature.stop_label)}"></label><label>Stop icon<ha-icon-picker data-feature-icon="stop_icon" data-feature="snooze"></ha-icon-picker></label>` : ""}</ha-expansion-panel>` : "";
+    const featureRows = features.map((feature) => `<div class="feature" draggable="true" data-feature="${feature.type}"><span class="drag-handle" title="Drag to reorder">⠿</span><ha-icon icon="${esc(feature.icon)}"></ha-icon><span>${esc(feature.label)}</span>${["snooze", "skip", "stop_alarm"].includes(feature.type) ? `<ha-icon-button data-edit="${feature.type}" label="Edit ${esc(feature.label)}"><ha-icon icon="mdi:pencil"></ha-icon></ha-icon-button>` : ""}<ha-icon-button data-remove="${feature.type}" label="Remove ${esc(feature.label)}"><ha-icon icon="mdi:delete"></ha-icon></ha-icon-button></div>${actionSettings(feature)}`).join("");
+    this.shadowRoot.innerHTML = `<style>:host{display:block;padding:12px 0}.field{display:block;margin:0 0 16px}.field span{display:block;margin-bottom:6px;color:var(--primary-text-color);font-size:14px}.field small{display:block;margin-top:4px;color:var(--secondary-text-color)}input{box-sizing:border-box;width:100%;padding:10px;border:1px solid var(--divider-color);border-radius:6px;background:var(--card-background-color);color:var(--primary-text-color);font:inherit}ha-entity-picker,ha-icon-picker,ha-selector{display:block;width:100%}.features{border:1px solid var(--divider-color);border-radius:8px;overflow:hidden}.features-toggle{font:inherit;color:var(--primary-text-color);cursor:pointer;display:flex;width:100%;align-items:center;justify-content:space-between;padding:12px;border:0;background:var(--card-background-color);font-weight:600}.features-body{padding:4px 12px 12px;border-top:1px solid var(--divider-color)}.feature{display:flex;align-items:center;gap:8px;padding:8px 0;cursor:grab}.feature ha-icon{color:var(--secondary-text-color)}.feature ha-icon-button{margin-left:auto}.feature ha-icon-button+ha-icon-button{margin-left:0}.drag-handle{color:var(--secondary-text-color);font-size:18px}.add-feature{margin-top:8px}.feature-settings{margin:0 0 8px}.feature-settings label{display:block;margin:10px 0}.feature-settings ha-icon-picker{margin-top:6px}</style><label class="field"><span>Entity</span><ha-entity-picker id="entity"></ha-entity-picker><small>Select the root Alarm Clock switch.</small></label><label class="field"><span>Title</span><input data-key="title" value="${esc(this._config.title || this._config.name || "Alarm Overview")}"></label><label class="field"><span>Icon</span><ha-icon-picker id="icon"></ha-icon-picker></label><section class="features"><button class="features-toggle" id="features" aria-expanded="${this._featuresOpen ? "true" : "false"}"><span>Features</span><span>${this._featuresOpen ? "⌃" : "⌄"}</span></button>${this._featuresOpen ? `<div class="features-body">${featureRows}${available.length ? `<div class="add-feature"><label>Add feature<ha-selector id="add-feature"></ha-selector></label></div>` : ""}</div>` : ""}</section>`;
+    const entityPicker = this.shadowRoot.querySelector("#entity"); entityPicker.hass = this._hass; entityPicker.value = this._config.entity || ""; entityPicker.includeDomains = ["switch"];
+    entityPicker.addEventListener("value-changed", (event) => this._update({ ...this._config, entity: event.detail.value }));
+    const iconPicker = this.shadowRoot.querySelector("#icon"); iconPicker.hass = this._hass; iconPicker.value = this._config.icon || "mdi:alarm";
+    iconPicker.addEventListener("value-changed", (event) => this._update({ ...this._config, icon: event.detail.value || "mdi:alarm" }));
+    this.shadowRoot.querySelectorAll("[data-key]").forEach((input) => input.onchange = () => { const config = { ...this._config }, value = input.value.trim(); if (value) config[input.dataset.key] = value; else delete config[input.dataset.key]; this._update(config); });
     this.shadowRoot.querySelector("#features").onclick = () => { this._featuresOpen = !this._featuresOpen; this.render(); };
-    const setFeature = (feature, shown) => {
-      const config = { ...this._config };
-      const key = { alarm_times: "show_alarm_times", alarm_time_list: "show_alarm_time_list", snooze: "show_snooze", skip: "show_skip", kill_alarm: "show_kill_alarm", override: "show_override" }[feature];
-      if (["alarm_time_list", "snooze", "skip", "kill_alarm"].includes(feature)) config[key] = shown;
-      else if (shown) delete config[key]; else config[key] = false;
-      if (feature === "snooze" && !shown) delete config.show_stop_playback;
-      this._config = config;
-      this.dispatchEvent(new CustomEvent("config-changed", { detail: { config }, bubbles: true, composed: true }));
-      this.render();
-    };
-    this.shadowRoot.querySelectorAll("button[data-feature]").forEach((button) => button.addEventListener("click", () => setFeature(button.dataset.feature, button.classList.contains("add-feature"))));
-    this.shadowRoot.querySelectorAll(".feature[draggable]").forEach((feature) => {
-      feature.addEventListener("dragstart", (event) => { event.dataTransfer.effectAllowed = "move"; event.dataTransfer.setData("text/plain", feature.dataset.feature); });
-      feature.addEventListener("dragover", (event) => event.preventDefault());
-      feature.addEventListener("drop", (event) => {
-        event.preventDefault();
-        const dragged = event.dataTransfer.getData("text/plain"), target = feature.dataset.feature;
-        if (!dragged || dragged === target) return;
-        const order = featureOrder.filter((key) => key !== dragged);
-        order.splice(order.indexOf(target), 0, dragged);
-        const config = { ...this._config, feature_order: order };
-        this._config = config;
-        this.dispatchEvent(new CustomEvent("config-changed", { detail: { config }, bubbles: true, composed: true }));
-        this.render();
-      });
-    });
+    const addFeature = this.shadowRoot.querySelector("#add-feature");
+    if (addFeature) { addFeature.hass = this._hass; addFeature.selector = { select: { mode: "dropdown", options: available.map((type) => ({ value: type, label: SUMMARY_FEATURES[type].label })) } }; addFeature.addEventListener("value-changed", (event) => { const feature = normaliseFeature({ type: event.detail.value }); if (feature) this._updateFeatures([...features, feature]); this.render(); }); }
+    this.shadowRoot.querySelectorAll("[data-edit]").forEach((button) => button.onclick = () => { this._editingFeature = this._editingFeature === button.dataset.edit ? null : button.dataset.edit; this.render(); });
+    this.shadowRoot.querySelectorAll("[data-remove]").forEach((button) => button.onclick = () => { this._editingFeature = null; this._updateFeatures(features.filter((feature) => feature.type !== button.dataset.remove)); this.render(); });
+    this.shadowRoot.querySelectorAll("[data-feature-field]").forEach((input) => input.onchange = () => { const updated = features.map((feature) => feature.type === input.dataset.feature ? { ...feature, [input.dataset.featureField]: input.value.trim() || SUMMARY_FEATURES[feature.type][input.dataset.featureField] } : feature); this._updateFeatures(updated); });
+    this.shadowRoot.querySelectorAll("[data-feature-icon]").forEach((picker) => { const feature = features.find((item) => item.type === picker.dataset.feature); picker.hass = this._hass; picker.value = feature[picker.dataset.featureIcon]; picker.addEventListener("value-changed", (event) => { const updated = features.map((item) => item.type === picker.dataset.feature ? { ...item, [picker.dataset.featureIcon]: event.detail.value || SUMMARY_FEATURES[item.type][picker.dataset.featureIcon] } : item); this._updateFeatures(updated); }); });
+    this.shadowRoot.querySelectorAll(".feature[draggable]").forEach((feature) => { feature.addEventListener("dragstart", (event) => { event.dataTransfer.effectAllowed = "move"; event.dataTransfer.setData("text/plain", feature.dataset.feature); }); feature.addEventListener("dragover", (event) => event.preventDefault()); feature.addEventListener("drop", (event) => { event.preventDefault(); const dragged = event.dataTransfer.getData("text/plain"), target = feature.dataset.feature; if (!dragged || dragged === target) return; const reordered = features.filter((item) => item.type !== dragged); reordered.splice(reordered.findIndex((item) => item.type === target), 0, features.find((item) => item.type === dragged)); this._updateFeatures(reordered); this.render(); }); });
   }
 }
 
