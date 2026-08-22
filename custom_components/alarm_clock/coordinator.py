@@ -81,6 +81,11 @@ class MorningAlarmCoordinator:
         )
 
     @property
+    def can_skip(self) -> bool:
+        """Whether the active alarm has a later step to start now."""
+        return bool(self._occurrence and self._next_skip_stage())
+
+    @property
     def stop_deadline(self) -> datetime | None:
         """Return the absolute stop deadline for the active occurrence."""
         return self._stop_deadline
@@ -379,6 +384,48 @@ class MorningAlarmCoordinator:
 
         self._snooze_cancel = async_track_point_in_time(self.hass, resume_callback, deadline)
 
+    async def async_skip(self) -> None:
+        """Stop the active step and begin the following one immediately."""
+        if not self._occurrence or self.status not in {
+            STATUS_PRE_ALARM,
+            STATUS_PLAYING,
+            STATUS_FOLLOWUP_PRE_ALARM,
+            STATUS_FOLLOWUP_PLAYING,
+        }:
+            return
+        next_stage = self._next_skip_stage()
+        if not next_stage:
+            return
+        token = self._occurrence
+        # Prevent a cancelled pre-alarm coroutine from starting its main media
+        # after this method has moved the sequence forward.
+        self._snoozing = True
+        task = self._stage_task
+        if task:
+            task.cancel()
+            self._stage_task = None
+            if task is not asyncio.current_task():
+                try:
+                    await task
+                except asyncio.CancelledError:
+                    pass
+        # The scheduled follow-up is no longer useful when Skip entered it.
+        if next_stage.startswith("followup") and self._follow_cancel:
+            self._follow_cancel()
+            self._follow_cancel = None
+        self._late_followup = False
+        await self._stop_media(force=True)
+        self._snoozing = False
+        if token != self._occurrence or (self._stop_deadline and dt_util.now() >= self._stop_deadline):
+            await self.async_stop(token=token)
+            return
+        if next_stage == "primary_main":
+            self._stage_task = self.hass.async_create_task(self._play_main_stage(token, False))
+        elif next_stage == "followup_pre":
+            self._stage_task = self.hass.async_create_task(self._play_stage(token, True))
+        else:
+            self._stage_task = self.hass.async_create_task(self._play_main_stage(token, True))
+
     def _next_snooze_stage(self) -> str | None:
         """Return the next configured stage, or repeat the active main media."""
         if self._current_stage == "primary_pre":
@@ -388,6 +435,18 @@ class MorningAlarmCoordinator:
         if self._current_stage == "followup_pre":
             return "followup_main"
         if self._current_stage == "followup_main":
+            return "followup_main"
+        return None
+
+    def _next_skip_stage(self) -> str | None:
+        """Return the following step, never repeating the final main alarm."""
+        if not self._snapshot:
+            return None
+        if self._current_stage == "primary_pre":
+            return "primary_main"
+        if self._current_stage == "primary_main" and self._snapshot[CONF_FOLLOWUP_ENABLED]:
+            return "followup_pre"
+        if self._current_stage == "followup_pre":
             return "followup_main"
         return None
 

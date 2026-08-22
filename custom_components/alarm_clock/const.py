@@ -99,6 +99,7 @@ SERVICE_TRIGGER_FOLLOW_UP = "trigger_follow_up"
 SERVICE_STOP = "stop"
 SERVICE_STOP_PLAYBACK = "stop_playback"
 SERVICE_SNOOZE = "snooze"
+SERVICE_SKIP = "skip"
 SERVICE_SET_MEDIA = "set_media"
 MEDIA_OPTION_KEYS = {
     "primary_main": CONF_PRIMARY_MAIN_MEDIA,

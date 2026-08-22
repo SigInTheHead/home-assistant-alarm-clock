@@ -60,6 +60,8 @@ class AlarmClockCard extends AlarmClockBase {
     const snoozeWouldStop = this.value("snooze_would_stop") === true || (stopDeadline && new Date(stopDeadline).getTime() - Date.now() <= snoozeDuration * 60000);
     const snoozing = status === "snoozed";
     const hasSnooze = this.config.show_snooze === true || this.config.show_stop_playback === true;
+    const hasSkip = this.config.show_skip !== false;
+    const canSkip = this.value("can_skip") === true;
     const friendlyNext = () => {
       if (!enabled) return "Next: alarm is off";
       if (!next || next === "unknown") return "Next: not scheduled";
@@ -75,10 +77,11 @@ class AlarmClockCard extends AlarmClockBase {
       alarm_times: this.config.show_alarm_times !== false ? `<div class="grid">${schedule.map(([label,key]) => `<div class="box"><label>${label}</label><br><b>${esc((this.value(key) || this._hass.states[this.config.entity]?.attributes?.day_times?.[key.replace("per_day_", "").replace("_time", "")] || "--:--").slice(0,5))}</b></div>`).join("")}</div>` : "",
       alarm_time_list: this.config.show_alarm_time_list === true ? `<div class="schedule-list">${schedule.map(([label,key]) => `<div class="row"><span>${label}</span><b>${esc((this.value(key) || this._hass.states[this.config.entity]?.attributes?.day_times?.[key.replace("per_day_", "").replace("_time", "")] || "--:--").slice(0,5))}</b></div>`).join("")}</div>` : "",
       snooze: hasSnooze ? `<button class="alarm-action${snoozeWouldStop ? " stop-action" : ""}" data-action="${snoozeWouldStop ? "stop" : "snooze"}" ${playbackActive ? "" : "disabled"}>${snoozing ? "Snoozing" : snoozeWouldStop ? "Stop" : "Snooze"}</button>` : "",
+      skip: hasSkip ? `<button class="alarm-action" data-action="skip" ${canSkip ? "" : "disabled"}>Skip</button>` : "",
       kill_alarm: this.config.show_kill_alarm === true ? `<button class="alarm-action stop-action" data-action="stop" ${alarmActive ? "" : "disabled"}>Stop alarm</button>` : "",
       override: this.config.show_override !== false ? `<div class="row override"><span>One-shot override <span class="sub">${esc((this.value("override_time") || "--:--").slice(0,5))}</span></span><ha-switch data-toggle="override" aria-label="Enable one-shot override"></ha-switch></div>` : "",
     };
-    const featureOrder = [...new Set([...(this.config.feature_order || []).map((key) => key === "stop_playback" ? "snooze" : key), "alarm_times", "override", ...(this.config.show_alarm_time_list === true ? ["alarm_time_list"] : []), ...(hasSnooze ? ["snooze"] : []), ...(this.config.show_kill_alarm === true ? ["kill_alarm"] : [])])].filter((key) => key in features);
+    const featureOrder = [...new Set([...(this.config.feature_order || []).map((key) => key === "stop_playback" ? "snooze" : key), "alarm_times", "override", ...(this.config.show_alarm_time_list === true ? ["alarm_time_list"] : []), ...(hasSnooze ? ["snooze"] : []), ...(hasSkip ? ["skip"] : []), ...(this.config.show_kill_alarm === true ? ["kill_alarm"] : [])])].filter((key) => key in features);
     this.shadowRoot.innerHTML = `${this.styles()}<ha-card class="summary"><div class="card-header"><ha-icon icon="${esc(this.config.icon || "mdi:alarm")}"></ha-icon><span>${esc(this.config.title || this.config.name || "Alarm Overview")}</span></div><div class="card-content"><div class="sub">${esc(friendlyNext())}</div>${configurationError ? `<div class="config-warning">${esc(configurationError)}</div>` : ""}<div class="row"><span>Enabled</span><ha-switch data-toggle="enabled" aria-label="Enable alarm"></ha-switch></div>${featureOrder.map((key) => features[key]).join("")}</div></ha-card>`;
     this.shadowRoot.querySelectorAll("ha-switch[data-toggle]").forEach((el) => {
       el.checked = this.value(el.dataset.toggle) === "on";
@@ -109,16 +112,18 @@ class AlarmClockCardConfigEditor extends HTMLElement {
     const hasAlarmTimes = this._config.show_alarm_times !== false;
     const hasAlarmTimeList = this._config.show_alarm_time_list === true;
     const hasSnooze = this._config.show_snooze === true || this._config.show_stop_playback === true;
+    const hasSkip = this._config.show_skip !== false;
     const hasKillAlarm = this._config.show_kill_alarm === true;
     const hasOverride = this._config.show_override !== false;
-    const visible = { alarm_times: hasAlarmTimes, alarm_time_list: hasAlarmTimeList, snooze: hasSnooze, kill_alarm: hasKillAlarm, override: hasOverride };
-    const featureOrder = [...new Set([...(this._config.feature_order || []).map((key) => key === "stop_playback" ? "snooze" : key), "alarm_times", "override", ...(hasAlarmTimeList ? ["alarm_time_list"] : []), ...(hasSnooze ? ["snooze"] : []), ...(hasKillAlarm ? ["kill_alarm"] : [])])].filter((key) => key in visible);
-    const featureLabels = { alarm_times: "Alarm time cards", alarm_time_list: "Compact alarm time list", snooze: "Snooze", kill_alarm: "Stop alarm", override: "Override time" };
+    const visible = { alarm_times: hasAlarmTimes, alarm_time_list: hasAlarmTimeList, snooze: hasSnooze, skip: hasSkip, kill_alarm: hasKillAlarm, override: hasOverride };
+    const featureOrder = [...new Set([...(this._config.feature_order || []).map((key) => key === "stop_playback" ? "snooze" : key), "alarm_times", "override", ...(hasAlarmTimeList ? ["alarm_time_list"] : []), ...(hasSnooze ? ["snooze"] : []), ...(hasSkip ? ["skip"] : []), ...(hasKillAlarm ? ["kill_alarm"] : [])])].filter((key) => key in visible);
+    const featureLabels = { alarm_times: "Alarm time cards", alarm_time_list: "Compact alarm time list", snooze: "Snooze", skip: "Skip", kill_alarm: "Stop alarm", override: "Override time" };
     const features = [
       ...featureOrder.filter((key) => visible[key]).map((key) => `<div class="feature" draggable="true" data-feature="${key}"><span class="drag-handle" title="Drag to reorder">⠿</span><span>${featureLabels[key]}</span><button class="feature-action" data-feature="${key}">Remove</button></div>`),
       !hasAlarmTimes ? `<button class="add-feature" data-feature="alarm_times">+ Add alarm time cards</button>` : "",
       !hasAlarmTimeList ? `<button class="add-feature" data-feature="alarm_time_list">+ Add compact alarm time list</button>` : "",
       !hasSnooze ? `<button class="add-feature" data-feature="snooze">+ Add snooze</button>` : "",
+      !hasSkip ? `<button class="add-feature" data-feature="skip">+ Add skip</button>` : "",
       !hasKillAlarm ? `<button class="add-feature" data-feature="kill_alarm">+ Add stop alarm</button>` : "",
       !hasOverride ? `<button class="add-feature" data-feature="override">+ Add override time</button>` : "",
     ].join("");
@@ -149,8 +154,8 @@ class AlarmClockCardConfigEditor extends HTMLElement {
     this.shadowRoot.querySelector("#features").onclick = () => { this._featuresOpen = !this._featuresOpen; this.render(); };
     const setFeature = (feature, shown) => {
       const config = { ...this._config };
-      const key = { alarm_times: "show_alarm_times", alarm_time_list: "show_alarm_time_list", snooze: "show_snooze", kill_alarm: "show_kill_alarm", override: "show_override" }[feature];
-      if (["alarm_time_list", "snooze", "kill_alarm"].includes(feature)) config[key] = shown;
+      const key = { alarm_times: "show_alarm_times", alarm_time_list: "show_alarm_time_list", snooze: "show_snooze", skip: "show_skip", kill_alarm: "show_kill_alarm", override: "show_override" }[feature];
+      if (["alarm_time_list", "snooze", "skip", "kill_alarm"].includes(feature)) config[key] = shown;
       else if (shown) delete config[key]; else config[key] = false;
       if (feature === "snooze" && !shown) delete config.show_stop_playback;
       this._config = config;

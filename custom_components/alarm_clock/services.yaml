@@ -38,6 +38,14 @@ snooze:
       required: true
       selector:
         text:
+skip:
+  name: Skip to next alarm step
+  description: Stop the current alarm step and begin the next one immediately, without changing the original stop timer.
+  fields:
+    entry_id:
+      required: true
+      selector:
+        text:
 set_media:
   name: Set main media
   description: Set primary or follow-up main media from an Alarm Clock card.

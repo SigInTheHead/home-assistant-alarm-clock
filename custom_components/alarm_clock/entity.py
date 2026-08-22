@@ -45,6 +45,7 @@ class MorningAlarmEntity(Entity):
             "alarm_active": self.coordinator.is_active,
             "alarm_configuration_error": self.coordinator.configuration_error,
             "snooze_would_stop": self.coordinator.snooze_would_stop,
+            "can_skip": self.coordinator.can_skip,
             "stop_deadline": self.coordinator.stop_deadline.isoformat() if self.coordinator.stop_deadline else None,
             "minute_granularity": self.coordinator.options[CONF_MINUTE_GRANULARITY],
             CONF_SCHEDULE_MODE: self.coordinator.options[CONF_SCHEDULE_MODE],
