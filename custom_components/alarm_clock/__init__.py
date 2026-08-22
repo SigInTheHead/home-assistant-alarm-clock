@@ -14,9 +14,10 @@ from .http import MorningAlarmToneView
 
 type MorningAlarmConfigEntry = ConfigEntry
 
-# Alarm Clock is configured through its config flow, not YAML.  Defining the
-# empty schema lets Home Assistant validate that explicitly.
-CONFIG_SCHEMA = vol.Schema({})
+# Alarm Clock is configured through its config flow, not YAML.  The permissive
+# top-level schema is intentional: Home Assistant applies an integration's
+# schema while reading the complete configuration.yaml file.
+CONFIG_SCHEMA = vol.Schema({}, extra=vol.ALLOW_EXTRA)
 
 async def async_setup(hass: HomeAssistant, config: dict) -> bool:
     """Set up domain-level actions."""
