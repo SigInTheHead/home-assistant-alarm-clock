@@ -49,6 +49,13 @@ PRE_ALARM_TONES = {
     "Soft Beep": "media-source://alarm_clock/soft-beep",
     "Soft Chime": "media-source://alarm_clock/soft-chime",
     "Gentle Alarm": "media-source://alarm_clock/gentle-alarm",
+    "Double Beep": "media-source://alarm_clock/double-beep",
+    "Rising Pulse": "media-source://alarm_clock/rising-pulse",
+    "Digital Alarm": "media-source://alarm_clock/digital-alarm",
+    "Urgent Tone": "media-source://alarm_clock/urgent-tone",
+    "High Alert": "media-source://alarm_clock/high-alert",
+    "Klaxon": "media-source://alarm_clock/klaxon",
+    "Rapid Beep": "media-source://alarm_clock/rapid-beep",
 }
 NUMERIC_LIMITS = {
     CONF_PRIMARY_PRE_DURATION: (1, 30),

@@ -11,6 +11,13 @@ TONES = {
     "soft-beep": ("Soft Beep", "soft-beep.wav"),
     "soft-chime": ("Soft Chime", "soft-chime.wav"),
     "gentle-alarm": ("Gentle Alarm", "gentle-alarm.wav"),
+    "double-beep": ("Double Beep", "double-beep.wav"),
+    "rising-pulse": ("Rising Pulse", "rising-pulse.wav"),
+    "digital-alarm": ("Digital Alarm", "digital-alarm.wav"),
+    "urgent-tone": ("Urgent Tone", "urgent-tone.wav"),
+    "high-alert": ("High Alert", "high-alert.wav"),
+    "klaxon": ("Klaxon", "klaxon.wav"),
+    "rapid-beep": ("Rapid Beep", "rapid-beep.wav"),
 }
 
 class MorningAlarmMediaSource(MediaSource):
@@ -22,7 +29,7 @@ class MorningAlarmMediaSource(MediaSource):
         if tone not in TONES: raise Unresolvable("Unknown Alarm Clock sound")
         # Version the resolved URL so players do not retain the former short
         # tone from the endpoint's cache.
-        return PlayMedia(f"/api/alarm_clock/media/{tone}.wav?v=2", "audio/wav")
+        return PlayMedia(f"/api/alarm_clock/media/{tone}.wav?v=3", "audio/wav")
     async def async_browse_media(self, item: MediaSourceItem) -> BrowseMediaSource:
         if item.identifier: raise Unresolvable("Alarm Clock sounds have no subfolders")
         return BrowseMediaSource(domain=DOMAIN, identifier="", media_class=MediaClass.DIRECTORY, media_content_type=MediaType.MUSIC, title="Alarm Clock", can_play=False, can_expand=True, children=[
