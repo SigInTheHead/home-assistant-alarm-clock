@@ -14,6 +14,10 @@ from .http import MorningAlarmToneView
 
 type MorningAlarmConfigEntry = ConfigEntry
 
+# Alarm Clock is configured through its config flow, not YAML.  Defining the
+# empty schema lets Home Assistant validate that explicitly.
+CONFIG_SCHEMA = vol.Schema({})
+
 async def async_setup(hass: HomeAssistant, config: dict) -> bool:
     """Set up domain-level actions."""
     await hass.http.async_register_static_paths([
