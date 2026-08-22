@@ -98,7 +98,9 @@ class MorningAlarmCoordinator:
         """Restore the next schedule, catching up a recent missed trigger once."""
         options, now = self.options, dt_util.now()
         if options[CONF_ENABLED] and self.configuration_error:
-            await self.async_set_option(CONF_ENABLED, False)
+            # An incomplete media selection is an editing state, not an
+            # instruction to turn the user's alarm off.
+            await self.async_reschedule()
             return
         if options[CONF_ENABLED]:
             if options[CONF_OVERRIDE]:
@@ -125,7 +127,19 @@ class MorningAlarmCoordinator:
         self._cancel_schedule()
         options = self.options
         if options[CONF_ENABLED] and self.configuration_error:
-            await self.async_set_option(CONF_ENABLED, False)
+            # Keep the enabled switch as the user set it, but do not arrange a
+            # future playback until the missing media has been chosen.
+            self.next_alarm = None
+            if not self._occurrence:
+                self.status = STATUS_SCHEDULED
+            self._notify()
+            return
+        # Playback uses an immutable snapshot captured at trigger time. A user
+        # changing its setup while it is playing must not alter or interrupt
+        # the active alarm.
+        if self._occurrence:
+            self.next_alarm = None
+            self._notify()
             return
         if not options[CONF_ENABLED]:
             self.status = STATUS_DISABLED
@@ -219,11 +233,8 @@ class MorningAlarmCoordinator:
         if key == CONF_ENABLED and value and self.configuration_error:
             raise HomeAssistantError(self.configuration_error)
         options[key] = value
-        disable_for_missing_media = key != CONF_ENABLED and options[CONF_ENABLED] and self._configuration_error_for(options)
-        if disable_for_missing_media:
-            options[CONF_ENABLED] = False
         self.hass.config_entries.async_update_entry(self.entry, options=options)
-        if (key == CONF_ENABLED and not value or disable_for_missing_media) and self._occurrence:
+        if key == CONF_ENABLED and not value and self._occurrence:
             await self.async_stop(manual=True)
 
     async def async_set_media(self, stage: str, media: dict[str, Any] | None) -> None:
@@ -232,12 +243,7 @@ class MorningAlarmCoordinator:
         if media is not None and not media.get("media_content_id"):
             return
         options = {**self.options, key: media}
-        disable_for_missing_media = options[CONF_ENABLED] and self._configuration_error_for(options)
-        if disable_for_missing_media:
-            options[CONF_ENABLED] = False
         self.hass.config_entries.async_update_entry(self.entry, options=options)
-        if disable_for_missing_media and self._occurrence:
-            await self.async_stop(manual=True)
 
     @staticmethod
     def _configuration_error_for(options: dict[str, Any]) -> str | None:
@@ -256,8 +262,7 @@ class MorningAlarmCoordinator:
 
     async def async_trigger(self, manual: bool) -> None:
         if self.configuration_error:
-            if self.options[CONF_ENABLED]:
-                await self.async_set_option(CONF_ENABLED, False)
+            _LOGGER.warning("Alarm Clock %s has incomplete media configuration", self.entry.title)
             return
         if not manual and not self.options[CONF_ENABLED]:
             await self.async_reschedule(); return
